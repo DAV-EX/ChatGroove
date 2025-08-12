@@ -191,9 +191,14 @@ export function registerRoutes(app: Express): Server {
       const { chatId } = req.params;
       const limit = parseInt(req.query.limit as string) || 50;
       
-      // Verify user is participant
+      // Verify user is participant (skip check for global rooms)
       const chat = await storage.getChatById(chatId);
-      if (!chat || !chat.participants.includes(userId)) {
+      if (!chat) {
+        return res.status(404).json({ message: "Chat not found" });
+      }
+      
+      // Allow access to global rooms without being a participant
+      if (!chat.isGlobalRoom && !chat.participants.includes(userId)) {
         return res.status(403).json({ message: "Access denied" });
       }
       
@@ -211,9 +216,14 @@ export function registerRoutes(app: Express): Server {
       const { chatId } = req.params;
       const messageData = insertMessageSchema.parse(req.body);
       
-      // Verify user is participant
+      // Verify user can send messages (allow global rooms)
       const chat = await storage.getChatById(chatId);
-      if (!chat || !chat.participants.includes(userId)) {
+      if (!chat) {
+        return res.status(404).json({ message: "Chat not found" });
+      }
+      
+      // Allow messages in global rooms without being a participant
+      if (!chat.isGlobalRoom && !chat.participants.includes(userId)) {
         return res.status(403).json({ message: "Access denied" });
       }
       
@@ -240,6 +250,54 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error("Error marking messages as read:", error);
       res.status(500).json({ message: "Failed to mark messages as read" });
+    }
+  });
+
+  // Message edit/delete routes
+  app.put('/api/messages/:messageId', authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!._id!;
+      const { messageId } = req.params;
+      const { content } = req.body;
+      
+      if (!content?.trim()) {
+        return res.status(400).json({ message: "Content is required" });
+      }
+      
+      // Get message to verify ownership
+      const message = await storage.getMessageById(messageId);
+      if (!message || message.senderId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const updatedMessage = await storage.updateMessage(messageId, {
+        content: content.trim(),
+        editedAt: new Date(),
+      });
+      
+      res.json(updatedMessage);
+    } catch (error) {
+      console.error("Error updating message:", error);
+      res.status(500).json({ message: "Failed to update message" });
+    }
+  });
+
+  app.delete('/api/messages/:messageId', authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!._id!;
+      const { messageId } = req.params;
+      
+      // Get message to verify ownership
+      const message = await storage.getMessageById(messageId);
+      if (!message || message.senderId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      await storage.deleteMessage(messageId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      res.status(500).json({ message: "Failed to delete message" });
     }
   });
 

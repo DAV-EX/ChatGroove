@@ -35,6 +35,8 @@ export interface IStorage {
   // Message operations
   createMessage(message: InsertMessage): Promise<Message>;
   getChatMessages(chatId: string, userId: string, limit?: number): Promise<MessageWithSender[]>;
+  getMessageById(messageId: string): Promise<Message | undefined>;
+  updateMessage(messageId: string, updates: Partial<Message>): Promise<Message | undefined>;
   markMessageAsRead(messageId: string, userId: string): Promise<void>;
   markChatMessagesAsRead(chatId: string, userId: string): Promise<void>;
 
@@ -303,6 +305,28 @@ export class DatabaseStorage implements IStorage {
         }
       }
     );
+  }
+
+  async getMessageById(messageId: string): Promise<Message | undefined> {
+    try {
+      const message = await MessageModel.findById(messageId);
+      return message?.toJSON() as Message;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async updateMessage(messageId: string, updates: Partial<Message>): Promise<Message | undefined> {
+    try {
+      const message = await MessageModel.findByIdAndUpdate(
+        messageId,
+        { $set: updates },
+        { new: true }
+      );
+      return message?.toJSON() as Message;
+    } catch (error) {
+      return undefined;
+    }
   }
 
   // Direct message helper

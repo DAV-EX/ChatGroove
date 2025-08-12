@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { loginSchema, registerSchema, type LoginData, type RegisterData } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { Mail, Lock, User, ArrowRight, MessageSquare } from "lucide-react";
+import { useEffect } from "react";
 
 // Extend Window type for Google OAuth
 declare global {
@@ -32,11 +33,12 @@ export default function AuthPage() {
   const { toast } = useToast();
   const { loginMutation, registerMutation, googleAuthMutation, user } = useAuth();
 
-  // Redirect if already logged in
-  if (user) {
-    setLocation("/");
-    return null;
-  }
+  // Redirect if already logged in (use useEffect to avoid state update during render)
+  useEffect(() => {
+    if (user) {
+      setLocation("/");
+    }
+  }, [user, setLocation]);
 
   const loginForm = useForm<LoginData>({
     resolver: zodResolver(loginSchema),

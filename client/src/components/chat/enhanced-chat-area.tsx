@@ -39,6 +39,8 @@ interface EnhancedChatAreaProps {
 export function EnhancedChatArea({ chatId, currentUser, onOpenMobileMenu, isMobileSidebarOpen }: EnhancedChatAreaProps) {
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -100,7 +102,70 @@ export function EnhancedChatArea({ chatId, currentUser, onOpenMobileMenu, isMobi
     e.preventDefault();
     if (!message.trim()) return;
     
-    sendMessageMutation.mutate({ content: message.trim() });
+    if (editingMessageId) {
+      handleUpdateMessage(editingMessageId, message.trim());
+    } else {
+      sendMessageMutation.mutate({ content: message.trim() });
+    }
+  };
+
+  const handleEditMessage = (messageId: string, content: string) => {
+    setEditingMessageId(messageId);
+    setEditingContent(content);
+    setMessage(content);
+  };
+
+  const handleUpdateMessage = async (messageId: string, content: string) => {
+    try {
+      await apiRequest(`/api/messages/${messageId}`, 'PUT', { content });
+      setEditingMessageId(null);
+      setEditingContent("");
+      setMessage("");
+      queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
+      toast({
+        title: "Message updated",
+        description: "Your message has been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update message",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!confirm("Are you sure you want to delete this message?")) return;
+    
+    try {
+      await apiRequest(`/api/messages/${messageId}`, 'DELETE');
+      queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
+      toast({
+        title: "Message deleted",
+        description: "Your message has been deleted successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete message",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMessageContextMenu = (e: React.MouseEvent, messageId: string, isOwn: boolean) => {
+    e.preventDefault();
+    if (isOwn) {
+      // Could implement a context menu here
+      console.log('Context menu for message:', messageId);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditingContent("");
+    setMessage("");
   };
 
   const scrollToBottom = () => {
@@ -269,11 +334,11 @@ export function EnhancedChatArea({ chatId, currentUser, onOpenMobileMenu, isMobi
             </div>
           ) : (
             messages.map((msg: MessageWithSender, index: number) => {
-              const isOwn = msg.senderId === currentUser.id;
+              const isOwn = msg.senderId === currentUser._id;
               const showAvatar = index === 0 || messages[index - 1]?.senderId !== msg.senderId;
               
               return (
-                <div key={msg.id} className={`flex items-end space-x-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                <div key={msg._id} className={`flex items-end space-x-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
                   {!isOwn && showAvatar && (
                     <Avatar className="h-8 w-8 mb-1 border border-white dark:border-gray-700">
                       <AvatarImage src={msg.sender.profileImageUrl || undefined} />
@@ -295,12 +360,40 @@ export function EnhancedChatArea({ chatId, currentUser, onOpenMobileMenu, isMobi
                     {msg.messageType !== 'text' ? (
                       <MultimediaMessage message={msg} isOwn={isOwn} />
                     ) : (
-                      <div className={`message-bubble p-3 ${isOwn ? 'own' : ''} ${
-                        isOwn 
-                          ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' 
-                          : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 shadow-sm'
-                      }`}>
+                      <div 
+                        className={`message-bubble p-3 ${isOwn ? 'own' : ''} ${
+                          isOwn 
+                            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' 
+                            : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 shadow-sm'
+                        } group relative hover:shadow-md transition-shadow cursor-pointer`}
+                        onDoubleClick={() => isOwn && handleEditMessage(msg._id!, msg.content || '')}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          handleMessageContextMenu(e, msg._id!, isOwn);
+                        }}
+                      >
                         <p className="text-sm leading-relaxed">{msg.content}</p>
+                        {msg.editedAt && (
+                          <span className="text-xs opacity-70 italic ml-2">(edited)</span>
+                        )}
+                        
+                        {/* Telegram-like message options */}
+                        {isOwn && (
+                          <div className="absolute -top-8 right-0 hidden group-hover:flex bg-black/80 rounded-lg px-2 py-1 space-x-1">
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleEditMessage(msg._id!, msg.content || ''); }}
+                              className="text-white hover:text-blue-300 text-xs px-1"
+                            >
+                              Edit
+                            </button>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleDeleteMessage(msg._id!); }}
+                              className="text-white hover:text-red-300 text-xs px-1"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                     
@@ -343,7 +436,7 @@ export function EnhancedChatArea({ chatId, currentUser, onOpenMobileMenu, isMobi
             <Input
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type a message..."
+              placeholder={editingMessageId ? "Edit message..." : "Type a message..."}
               className="pl-3 pr-10 py-2 lg:pl-4 lg:pr-12 lg:py-3 rounded-2xl bg-purple-50 dark:bg-gray-800 border-purple-200 dark:border-purple-700 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm lg:text-base"
               disabled={sendMessageMutation.isPending}
               data-testid="input-message"
@@ -370,6 +463,12 @@ export function EnhancedChatArea({ chatId, currentUser, onOpenMobileMenu, isMobi
               <Send className="w-4 h-4 lg:w-5 lg:h-5" />
             )}
           </Button>
+          
+          {editingMessageId && (
+            <Button type="button" onClick={handleCancelEdit} variant="ghost" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-sm">
+              Cancel
+            </Button>
+          )}
         </form>
       </div>
     </div>
