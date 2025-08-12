@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { Sidebar } from "@/components/chat/sidebar";
@@ -6,6 +7,7 @@ import { EnhancedChatArea } from "@/components/chat/enhanced-chat-area";
 import { ProfileModal } from "@/components/profile/profile-modal";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import type { ChatWithParticipants } from "@shared/schema";
 
 export default function Home() {
   const [selectedChatId, setSelectedChatId] = useState<string>();
@@ -13,12 +15,34 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const { user, isLoading } = useAuth();
 
+  // Fetch global rooms to auto-select the main one
+  const { data: globalRooms = [] } = useQuery<ChatWithParticipants[]>({
+    queryKey: ["/api/chats/global"],
+    enabled: !!user,
+  });
+
   // Redirect to auth page if not logged in
   useEffect(() => {
     if (!isLoading && !user) {
       setLocation("/auth");
     }
   }, [user, isLoading, setLocation]);
+
+  // Auto-select the main global chatroom when user first lands
+  useEffect(() => {
+    if (user && globalRooms.length > 0 && !selectedChatId) {
+      // Find the main global room (usually "General" or first one)
+      const mainRoom = globalRooms.find(room => 
+        room.name?.toLowerCase().includes('general') || 
+        room.name?.toLowerCase().includes('welcome') ||
+        room.name?.toLowerCase().includes('main')
+      ) || globalRooms[0]; // Fallback to first room
+      
+      if (mainRoom) {
+        setSelectedChatId(mainRoom._id!);
+      }
+    }
+  }, [user, globalRooms, selectedChatId]);
 
   if (isLoading) {
     return (

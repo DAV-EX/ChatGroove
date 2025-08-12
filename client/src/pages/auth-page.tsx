@@ -98,11 +98,41 @@ export default function AuthPage() {
           client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '1066977440073-3nb0oq5qcp70k0gfnb94o6f6c61kmboe.apps.googleusercontent.com',
           callback: (response: any) => {
             googleAuthMutation.mutate(response.credential);
-          }
+          },
+          use_fedcm_for_prompt: true
         });
 
-        // Prompt for one-tap sign-in or show popup
-        window.google.accounts.id.prompt();
+        // Try one-tap first, fallback to popup if needed
+        window.google.accounts.id.prompt((notification: any) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            // If one-tap doesn't work, create a popup
+            const tempDiv = document.createElement('div');
+            tempDiv.style.position = 'fixed';
+            tempDiv.style.top = '50%';
+            tempDiv.style.left = '50%';
+            tempDiv.style.transform = 'translate(-50%, -50%)';
+            tempDiv.style.zIndex = '9999';
+            document.body.appendChild(tempDiv);
+            
+            window.google?.accounts.id.renderButton(tempDiv, {
+              theme: 'outline',
+              size: 'large',
+              width: 300
+            });
+
+            // Auto-click the button to open popup
+            setTimeout(() => {
+              const googleButton = tempDiv.querySelector('div[role="button"]') as HTMLElement;
+              if (googleButton) {
+                googleButton.click();
+              }
+              // Remove the temp div after a short delay
+              setTimeout(() => {
+                document.body.removeChild(tempDiv);
+              }, 1000);
+            }, 100);
+          }
+        });
       }
       
     } catch (error) {
