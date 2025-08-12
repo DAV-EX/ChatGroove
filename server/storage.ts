@@ -17,8 +17,8 @@ import mongoose from 'mongoose';
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<UserProfile | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
-  createUser(userData: Partial<User>): Promise<UserProfile>;
+  getUserByEmail(email: string): Promise<(UserProfile & { password?: string }) | undefined>;
+  createUser(userData: any): Promise<UserProfile>;
   updateUser(id: string, userData: Partial<User>): Promise<UserProfile | undefined>;
   updateUserOnlineStatus(userId: string, isOnline: boolean): Promise<void>;
   searchUsers(query: string, excludeUserId: string): Promise<UserProfile[]>;
@@ -40,6 +40,16 @@ export interface IStorage {
 
   // Direct message helper
   getOrCreateDirectChat(userId1: string, userId2: string): Promise<Chat>;
+  
+  // Admin operations
+  getAllUsers(limit?: number, skip?: number): Promise<UserProfile[]>;
+  getAllChats(limit?: number, skip?: number): Promise<ChatWithParticipants[]>;
+  getAllMessages(limit?: number, skip?: number): Promise<MessageWithSender[]>;
+  getUserStats(): Promise<{ totalUsers: number; onlineUsers: number; totalChats: number; totalMessages: number }>;
+  deleteUser(userId: string): Promise<void>;
+  deleteChat(chatId: string): Promise<void>;
+  deleteMessage(messageId: string): Promise<void>;
+  updateUserRole(userId: string, role: 'user' | 'admin' | 'moderator'): Promise<UserProfile | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -263,7 +273,7 @@ export class DatabaseStorage implements IStorage {
         ...(message as any).replyToId.toObject(),
         sender: (message as any).replyToId.senderId
       } : undefined,
-      isRead: message.readBy?.some(read => read.userId === userId) || false
+      isRead: message.readBy?.some((read: any) => read.userId === userId) || false
     }));
   }
 
@@ -312,15 +322,105 @@ export class DatabaseStorage implements IStorage {
     const newChat = await this.createChat({
       isGroup: false,
       isGlobalRoom: false,
+      maxMembers: 2,
+      isPublic: false,
       createdBy: userId1,
       participants: [userId1, userId2]
     });
 
     return newChat;
   }
+
+  // Admin operations
+  async getAllUsers(limit = 50, skip = 0): Promise<UserProfile[]> {
+    const users = await UserModel.find()
+      .select('-password -emailVerificationToken -resetPasswordToken -resetPasswordExpires')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip(skip);
+    
+    return users.map(user => user.toJSON() as UserProfile);
+  }
+
+  async getAllChats(limit = 50, skip = 0): Promise<ChatWithParticipants[]> {
+    const chats = await ChatModel.find()
+      .populate('participants', 'username firstName lastName profileImageUrl')
+      .populate('createdBy', 'username firstName lastName profileImageUrl')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip(skip);
+
+    return chats.map(chat => ({
+      ...chat.toObject(),
+      participantDetails: (chat as any).participants,
+      createdByDetails: (chat as any).createdBy
+    })) as ChatWithParticipants[];
+  }
+
+  async getAllMessages(limit = 100, skip = 0): Promise<MessageWithSender[]> {
+    const messages = await MessageModel.find()
+      .populate('senderId', 'username firstName lastName profileImageUrl')
+      .populate('chatId', 'name isGroup isGlobalRoom')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip(skip);
+
+    return messages.map(message => ({
+      ...message.toObject(),
+      sender: (message as any).senderId,
+      chat: (message as any).chatId
+    })) as MessageWithSender[];
+  }
+
+  async getUserStats(): Promise<{ totalUsers: number; onlineUsers: number; totalChats: number; totalMessages: number }> {
+    const [totalUsers, onlineUsers, totalChats, totalMessages] = await Promise.all([
+      UserModel.countDocuments(),
+      UserModel.countDocuments({ isOnline: true }),
+      ChatModel.countDocuments(),
+      MessageModel.countDocuments()
+    ]);
+
+    return { totalUsers, onlineUsers, totalChats, totalMessages };
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    // Delete user's messages
+    await MessageModel.deleteMany({ senderId: userId });
+    
+    // Remove user from chat participants
+    await ChatModel.updateMany(
+      { participants: userId },
+      { $pull: { participants: userId } }
+    );
+    
+    // Delete user
+    await UserModel.findByIdAndDelete(userId);
+  }
+
+  async deleteChat(chatId: string): Promise<void> {
+    // Delete all messages in the chat
+    await MessageModel.deleteMany({ chatId });
+    
+    // Delete the chat
+    await ChatModel.findByIdAndDelete(chatId);
+  }
+
+  async deleteMessage(messageId: string): Promise<void> {
+    await MessageModel.findByIdAndDelete(messageId);
+  }
+
+  async updateUserRole(userId: string, role: 'user' | 'admin' | 'moderator'): Promise<UserProfile | undefined> {
+    const user = await UserModel.findByIdAndUpdate(
+      userId, 
+      { role }, 
+      { new: true }
+    ).select('-password -emailVerificationToken -resetPasswordToken -resetPasswordExpires');
+    
+    return user?.toJSON() as UserProfile;
+  }
 }
 
-// Use memory storage for now due to MongoDB connection issues
+// For now, use memory storage while MongoDB is being fixed
 import { MemoryStorage, initializeDefaultRooms } from './memoryStorage';
 
 export const storage = new MemoryStorage();

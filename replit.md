@@ -1,18 +1,19 @@
 # Overview
 
-ChatGroove is a fully functional modern social messaging application that successfully combines the best features from WhatsApp, Facebook Messenger, and Telegram with innovative ChatGroove-specific branding and functionality. The app is production-ready with complete authentication, real-time messaging, global chat rooms, group functionality, private messaging, multimedia support, and a distinctive visual identity that sets it apart from existing platforms.
+ChatGroove is a fully functional modern social messaging application that successfully combines the best features from WhatsApp, Facebook Messenger, and Telegram with innovative ChatGroove-specific branding and functionality. The app is production-ready with complete authentication, real-time messaging, global chat rooms, group functionality, private messaging, multimedia support, and a comprehensive admin dashboard.
 
 ## Current Status: Production-Ready ✓
-- Complete authentication system with Replit Auth integration
-- Real-time messaging with PostgreSQL backend
-- Global room discovery and joining functionality  
-- Group chat creation and management
-- Private one-on-one messaging with video/audio call controls
-- Modern responsive UI with custom ChatGroove branding
-- Dark/light theme support with beautiful gradients
-- Multimedia message support (voice, video, files)
-- Role-based permissions (admin, moderator badges)
-- Mobile-optimized interface with smooth animations
+- **Complete Authentication System**: JWT-based auth with Google OAuth integration and email verification
+- **MongoDB Integration**: Full MongoDB Atlas support with proper fallback mechanisms
+- **Real-time Messaging**: Multi-participant chat support with read receipts and message types
+- **Global Room Discovery**: Public chat rooms users can browse and join
+- **Group Chat Management**: Create and manage group conversations
+- **Private Messaging**: One-on-one direct messaging with multimedia support
+- **Admin Dashboard**: Complete administrative interface for user and content management
+- **Modern UI**: Responsive design with dark/light theme support
+- **Role-based Permissions**: User, moderator, and admin roles with proper access control
+- **Email System**: SMTP integration for email verification and notifications
+- **Multimedia Support**: Text, image, file, voice, and video message types
 
 # User Preferences
 
@@ -41,26 +42,38 @@ The server uses **Express.js** with TypeScript in ESM format:
 - **File Structure**: Modular design with separate files for routes, storage layer, database connection, and authentication
 
 ## Data Storage
-**PostgreSQL** database with **Drizzle ORM** for type-safe database operations:
-- **Schema Design**: Normalized relational structure with proper foreign key relationships
-- **Tables**: Users, chats, messages, chat participants, message reads, and sessions
-- **Connection**: Uses Neon serverless PostgreSQL with connection pooling
-- **Migrations**: Drizzle Kit for schema management and migrations
+**MongoDB Atlas** with **Mongoose ODM** for flexible document-based operations:
+- **Schema Design**: Flexible document structure with proper relationships
+- **Collections**: Users, chats, and messages with embedded participant management
+- **Connection**: MongoDB Atlas with automatic failover to memory storage during development
+- **Security**: Proper authentication and IP whitelisting for production access
 
 ## Authentication System
-**Replit Auth** integration using OpenID Connect:
-- **Session Management**: PostgreSQL-backed sessions with connect-pg-simple
-- **User Management**: Automatic user creation/updates from OAuth claims
-- **Security**: HTTP-only cookies, CSRF protection, and proper session validation
-- **Profile Management**: User profiles with customizable display names, bios, and avatars
+**JWT-based authentication** with **Google OAuth** integration:
+- **JWT Tokens**: Secure token-based authentication with configurable expiration
+- **Google OAuth**: Full Google sign-in integration with automatic account linking
+- **Email Verification**: SMTP-based email verification system
+- **Role Management**: User, moderator, and admin roles with permission-based access control
+- **Password Security**: bcrypt hashing for secure password storage
 
 ## Chat System Architecture
-**Multi-participant chat support** with both direct messages and group functionality:
-- **Message Types**: Text messages with planned support for images and files
-- **Read Receipts**: Track message read status per user
-- **Online Status**: Real-time user presence indicators
-- **Search**: User discovery and chat search functionality
-- **Message History**: Paginated message loading with proper ordering
+**Multi-participant chat support** with comprehensive messaging features:
+- **Message Types**: Text, image, file, voice note, video note, video call, and audio call support
+- **Read Receipts**: Track message read status per user with timestamps
+- **Online Status**: Real-time user presence indicators with last seen timestamps
+- **Global Rooms**: Public chat rooms with categories (General, Gaming, Music, Technology, Creative, Food & Travel)
+- **Group Management**: Create, join, and manage group conversations
+- **Direct Messages**: Private one-on-one conversations
+- **Message History**: Paginated message loading with proper ordering and reply support
+
+## Admin Dashboard
+**Comprehensive administrative interface** for platform management:
+- **User Management**: View, edit roles, and delete user accounts
+- **Chat Moderation**: Monitor and delete inappropriate chat rooms
+- **Message Moderation**: Review and remove individual messages
+- **Statistics Dashboard**: Real-time metrics for users, chats, and messages
+- **Role Assignment**: Promote users to moderator or admin status
+- **Access Control**: Admin-only routes with proper authentication middleware
 
 ## Development Tools
 - **Build System**: Vite for fast development and optimized production builds

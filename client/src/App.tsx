@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/use-auth";
 import AuthPage from "@/pages/auth-page";
 import Home from "@/pages/home";
 import NotFound from "@/pages/not-found";
+import AdminDashboard from "@/pages/AdminDashboard";
 import { ChatInterfacesDemo } from "@/components/demo/chat-interfaces-demo";
 
 function Router() {
@@ -15,6 +16,7 @@ function Router() {
     <Switch>
       <Route path="/demo" component={ChatInterfacesDemo} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/admin" component={AdminDashboard} />
       <Route path="/" component={Home} />
       <Route component={NotFound} />
     </Switch>

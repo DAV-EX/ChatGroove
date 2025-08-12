@@ -35,6 +35,34 @@ export interface AuthenticatedRequest extends Request {
   user?: UserProfile;
 }
 
+// Admin authentication middleware
+export const authenticateAdmin = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({ message: 'Access token required' });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    const user = await storage.getUser(decoded.userId);
+
+    if (!user) {
+      return res.status(401).json({ message: 'User not found' });
+    }
+
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: 'Invalid or expired token' });
+  }
+};
+
 export const authenticateToken = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
@@ -205,7 +233,11 @@ export const googleAuth = async (req: Request, res: Response) => {
       user = { ...updatedUser, _id: updatedUser?._id } as any;
     }
 
-    const userId = user._id!;
+    if (!user || !user._id) {
+      return res.status(500).json({ message: 'Failed to create or retrieve user' });
+    }
+    
+    const userId = user._id;
     const jwtToken = generateToken(userId);
     const userProfile = await storage.getUser(userId);
 

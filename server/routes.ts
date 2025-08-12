@@ -10,6 +10,7 @@ import {
   getMe, 
   logout,
   authenticateToken,
+  authenticateAdmin,
   type AuthenticatedRequest 
 } from "./auth";
 import { insertMessageSchema, insertChatSchema } from "@shared/schema";
@@ -239,6 +240,108 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error("Error marking messages as read:", error);
       res.status(500).json({ message: "Failed to mark messages as read" });
+    }
+  });
+
+  // Admin routes (protected)
+  app.get('/api/admin/stats', authenticateAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const stats = await storage.getUserStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching admin stats:", error);
+      res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
+  app.get('/api/admin/users', authenticateAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const skip = parseInt(req.query.skip as string) || 0;
+      const users = await storage.getAllUsers(limit, skip);
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.get('/api/admin/chats', authenticateAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const skip = parseInt(req.query.skip as string) || 0;
+      const chats = await storage.getAllChats(limit, skip);
+      res.json(chats);
+    } catch (error) {
+      console.error("Error fetching chats:", error);
+      res.status(500).json({ message: "Failed to fetch chats" });
+    }
+  });
+
+  app.get('/api/admin/messages', authenticateAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const skip = parseInt(req.query.skip as string) || 0;
+      const messages = await storage.getAllMessages(limit, skip);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  app.put('/api/admin/users/:userId/role', authenticateAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId } = req.params;
+      const { role } = req.body;
+      
+      if (!['user', 'admin', 'moderator'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+      
+      const updatedUser = await storage.updateUserRole(userId, role);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
+  app.delete('/api/admin/users/:userId', authenticateAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId } = req.params;
+      await storage.deleteUser(userId);
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  app.delete('/api/admin/chats/:chatId', authenticateAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { chatId } = req.params;
+      await storage.deleteChat(chatId);
+      res.json({ message: "Chat deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting chat:", error);
+      res.status(500).json({ message: "Failed to delete chat" });
+    }
+  });
+
+  app.delete('/api/admin/messages/:messageId', authenticateAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { messageId } = req.params;
+      await storage.deleteMessage(messageId);
+      res.json({ message: "Message deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      res.status(500).json({ message: "Failed to delete message" });
     }
   });
 

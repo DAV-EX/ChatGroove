@@ -40,8 +40,12 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  // Seed global rooms after database setup
-  await seedGlobalRooms();
+  // Seed global rooms after database setup (skip if MongoDB unavailable)
+  try {
+    await seedGlobalRooms();
+  } catch (error) {
+    console.log("MongoDB unavailable, skipping global rooms seeding");
+  }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

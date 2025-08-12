@@ -88,6 +88,11 @@ const UserSchema = new Schema<UserDocument>({
     enum: ['email', 'google'],
     default: 'email',
   },
+  role: {
+    type: String,
+    enum: ['user', 'admin', 'moderator'],
+    default: 'user',
+  },
 }, {
   timestamps: true,
 });

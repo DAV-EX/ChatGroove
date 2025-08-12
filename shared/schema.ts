@@ -22,6 +22,7 @@ export const userSchema = z.object({
   resetPasswordExpires: z.date().optional(),
   googleId: z.string().optional(), // For Google OAuth
   provider: z.enum(["email", "google"]).default("email"),
+  role: z.enum(["user", "admin", "moderator"]).default("user"),
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
 });

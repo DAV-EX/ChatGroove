@@ -25,11 +25,24 @@ export class MemoryStorage implements IStorage {
   }
 
   // User operations
-  async createUser(userData: InsertUser & { password?: string }): Promise<UserProfile> {
+  async createUser(userData: any): Promise<UserProfile> {
     const id = this.generateId('user');
     const user = {
       _id: id,
-      ...userData,
+      email: userData.email,
+      username: userData.username,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      password: userData.password,
+      profileImageUrl: userData.profileImageUrl,
+      bio: userData.bio,
+      phoneNumber: userData.phoneNumber,
+      googleId: userData.googleId,
+      provider: userData.provider || 'email',
+      role: userData.role || 'user',
+      emailVerificationToken: userData.emailVerificationToken,
+      resetPasswordToken: userData.resetPasswordToken,
+      resetPasswordExpires: userData.resetPasswordExpires,
       createdAt: new Date(),
       updatedAt: new Date(),
       lastSeen: new Date(),
@@ -37,7 +50,7 @@ export class MemoryStorage implements IStorage {
       status: "Available",
       theme: "light" as const,
       language: "en",
-      isEmailVerified: userData.provider === 'google' || false,
+      isEmailVerified: userData.provider === 'google' || userData.isEmailVerified || false,
     };
     
     users.set(id, user);
@@ -55,12 +68,11 @@ export class MemoryStorage implements IStorage {
     return userProfile as UserProfile;
   }
 
-  async getUserByEmail(email: string): Promise<UserProfile | undefined> {
+  async getUserByEmail(email: string): Promise<(UserProfile & { password?: string }) | undefined> {
     const usersArray = Array.from(users.values());
     for (const user of usersArray) {
       if (user.email === email) {
-        const { password, emailVerificationToken, resetPasswordToken, resetPasswordExpires, ...userProfile } = user;
-        return userProfile as UserProfile;
+        return user as (UserProfile & { password?: string });
       }
     }
     return undefined;
@@ -197,7 +209,7 @@ export class MemoryStorage implements IStorage {
     );
   }
 
-  async getGlobalRooms(): Promise<ChatWithParticipants[]> {
+  async getGlobalRoomsInternal(): Promise<ChatWithParticipants[]> {
     const globalRooms: ChatWithParticipants[] = [];
     const chatsArray = Array.from(chats.values());
     
@@ -363,6 +375,8 @@ export class MemoryStorage implements IStorage {
     const newChat = await this.createChat({
       isGroup: false,
       isGlobalRoom: false,
+      maxMembers: 2,
+      isPublic: false,
       createdBy: userId1,
       participants: [userId1, userId2]
     });
@@ -384,7 +398,105 @@ export class MemoryStorage implements IStorage {
   }
 
   async getGlobalRooms(userId: string): Promise<ChatWithParticipants[]> {
-    return this.getGlobalRooms();
+    return this.getGlobalRoomsInternal();
+  }
+
+  // Admin operations
+  async getAllUsers(limit = 50, skip = 0): Promise<UserProfile[]> {
+    const usersArray = Array.from(users.values());
+    return usersArray
+      .slice(skip, skip + limit)
+      .map(user => {
+        const { password, emailVerificationToken, resetPasswordToken, resetPasswordExpires, ...userProfile } = user;
+        return userProfile as UserProfile;
+      });
+  }
+
+  async getAllChats(limit = 50, skip = 0): Promise<ChatWithParticipants[]> {
+    const chatsArray = Array.from(chats.values());
+    const result: ChatWithParticipants[] = [];
+    
+    for (const chat of chatsArray.slice(skip, skip + limit)) {
+      const chatWithParticipants = await this.getChatWithParticipants(chat._id!);
+      if (chatWithParticipants) {
+        result.push(chatWithParticipants);
+      }
+    }
+    
+    return result;
+  }
+
+  async getAllMessages(limit = 100, skip = 0): Promise<MessageWithSender[]> {
+    const messagesArray = Array.from(messages.values());
+    const result: MessageWithSender[] = [];
+    
+    for (const message of messagesArray.slice(skip, skip + limit)) {
+      const sender = await this.getUser(message.senderId);
+      if (sender) {
+        result.push({
+          ...message,
+          sender,
+          isRead: false
+        });
+      }
+    }
+    
+    return result.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async getUserStats(): Promise<{ totalUsers: number; onlineUsers: number; totalChats: number; totalMessages: number }> {
+    const usersArray = Array.from(users.values());
+    return {
+      totalUsers: usersArray.length,
+      onlineUsers: usersArray.filter(user => user.isOnline).length,
+      totalChats: chats.size,
+      totalMessages: messages.size
+    };
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    // Remove user from all chats
+    for (const chat of chats.values()) {
+      chat.participants = chat.participants.filter(id => id !== userId);
+    }
+    
+    // Delete user's messages
+    for (const [messageId, message] of messages.entries()) {
+      if (message.senderId === userId) {
+        messages.delete(messageId);
+      }
+    }
+    
+    // Delete user
+    users.delete(userId);
+  }
+
+  async deleteChat(chatId: string): Promise<void> {
+    // Delete all messages in the chat
+    for (const [messageId, message] of messages.entries()) {
+      if (message.chatId === chatId) {
+        messages.delete(messageId);
+      }
+    }
+    
+    // Delete the chat
+    chats.delete(chatId);
+  }
+
+  async deleteMessage(messageId: string): Promise<void> {
+    messages.delete(messageId);
+  }
+
+  async updateUserRole(userId: string, role: 'user' | 'admin' | 'moderator'): Promise<UserProfile | undefined> {
+    const user = users.get(userId);
+    if (user) {
+      user.role = role;
+      users.set(userId, user);
+      
+      const { password, emailVerificationToken, resetPasswordToken, resetPasswordExpires, ...userProfile } = user;
+      return userProfile as UserProfile;
+    }
+    return undefined;
   }
 }
 
