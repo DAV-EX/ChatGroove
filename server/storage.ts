@@ -420,10 +420,12 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// For now, use memory storage while MongoDB is being fixed
+// Use memory storage for now since MongoDB has connection issues
 import { MemoryStorage, initializeDefaultRooms } from './memoryStorage';
 
 export const storage = new MemoryStorage();
 
 // Initialize default global rooms
 initializeDefaultRooms();
+
+console.log('✓ Using memory storage (MongoDB fallback active)');

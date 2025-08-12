@@ -155,6 +155,7 @@ export const login = async (req: Request, res: Response) => {
 
     // Find user by email
     const user = await storage.getUserByEmail(validatedData.email);
+    console.log('Login attempt for:', validatedData.email, 'Found user:', user ? 'yes' : 'no');
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }

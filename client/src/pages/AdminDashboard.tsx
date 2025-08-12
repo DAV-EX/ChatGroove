@@ -3,11 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Users, MessageSquare, Globe, BarChart3, Trash2, Shield, UserCog } from 'lucide-react';
+import { Users, MessageSquare, Globe, BarChart3, Trash2, Shield, UserCog, LogIn } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -57,29 +59,78 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [newRole, setNewRole] = useState<'user' | 'admin' | 'moderator'>('user');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Check for existing token on component mount
+  React.useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoggingIn(true);
+    
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        localStorage.setItem('authToken', data.token);
+        setIsAuthenticated(true);
+        toast({ title: 'Success', description: 'Logged in successfully' });
+      } else {
+        toast({ title: 'Error', description: data.message || 'Login failed', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Login failed', variant: 'destructive' });
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    setIsAuthenticated(false);
+    toast({ title: 'Success', description: 'Logged out successfully' });
+  };
 
   // Fetch admin stats
   const { data: stats, isLoading: statsLoading } = useQuery<AdminStats>({
     queryKey: ['/api/admin/stats'],
     refetchInterval: 30000, // Refresh every 30 seconds
+    enabled: isAuthenticated,
   });
 
   // Fetch users
   const { data: users, isLoading: usersLoading } = useQuery<AdminUser[]>({
     queryKey: ['/api/admin/users'],
     refetchInterval: 60000, // Refresh every minute
+    enabled: isAuthenticated,
   });
 
   // Fetch chats
   const { data: chats, isLoading: chatsLoading } = useQuery<AdminChat[]>({
     queryKey: ['/api/admin/chats'],
     refetchInterval: 60000,
+    enabled: isAuthenticated,
   });
 
   // Fetch messages
   const { data: messages, isLoading: messagesLoading } = useQuery<AdminMessage[]>({
     queryKey: ['/api/admin/messages'],
     refetchInterval: 60000,
+    enabled: isAuthenticated,
   });
 
   // Mutations for admin actions
@@ -162,6 +213,77 @@ export default function AdminDashboard() {
     </Card>
   );
 
+  // Login form if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <div className="flex items-center justify-center space-x-2">
+              <Shield className="h-6 w-6" />
+              <CardTitle className="text-2xl">Admin Login</CardTitle>
+            </div>
+            <CardDescription>
+              Enter your credentials to access the admin dashboard
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="admin@chatgroove.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  data-testid="input-admin-email"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  data-testid="input-admin-password"
+                />
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoggingIn}
+                data-testid="button-admin-login"
+              >
+                {isLoggingIn ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    Logging in...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Login
+                  </>
+                )}
+              </Button>
+            </form>
+            <div className="mt-4 p-3 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground text-center">
+                Demo credentials:<br />
+                <strong>admin@chatgroove.com / admin123</strong>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -169,10 +291,15 @@ export default function AdminDashboard() {
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
           <p className="text-muted-foreground">Manage your ChatGroove application</p>
         </div>
-        <Badge variant="secondary" className="text-lg px-3 py-1">
-          <Shield className="h-4 w-4 mr-1" />
-          Admin Access
-        </Badge>
+        <div className="flex items-center space-x-2">
+          <Badge variant="secondary" className="text-lg px-3 py-1">
+            <Shield className="h-4 w-4 mr-1" />
+            Admin Access
+          </Badge>
+          <Button variant="outline" onClick={handleLogout} data-testid="button-admin-logout">
+            Logout
+          </Button>
+        </div>
       </div>
 
       {/* Stats Grid */}

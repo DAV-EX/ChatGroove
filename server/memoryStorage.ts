@@ -69,12 +69,17 @@ export class MemoryStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<(UserProfile & { password?: string }) | undefined> {
+    console.log(`Looking for user with email: ${email}`);
+    console.log(`Total users in memory: ${users.size}`);
     const usersArray = Array.from(users.values());
     for (const user of usersArray) {
+      console.log(`Checking user: ${user.email}`);
       if (user.email === email) {
+        console.log(`Found user: ${user.username}`);
         return user as (UserProfile & { password?: string });
       }
     }
+    console.log(`No user found with email: ${email}`);
     return undefined;
   }
 
@@ -500,10 +505,38 @@ export class MemoryStorage implements IStorage {
   }
 }
 
-// Create a default set of global rooms
+// Create a default set of global rooms and test admin user
 export function initializeDefaultRooms(): void {
-  const storage = new MemoryStorage();
+  // Create a test admin user directly in the global users map
+  const adminId = `user_${userIdCounter++}`;
+  const adminUser = {
+    _id: adminId,
+    email: 'admin@chatgroove.com',
+    username: 'admin',
+    firstName: 'Admin',
+    lastName: 'User',
+    password: '$2b$12$6qqYSnxm7dFDiLLWqgUaCOE.LJlbypGewLTlgftGxO5N7j3JjVnQe', // password: admin123
+    role: 'admin' as const,
+    provider: 'email' as const,
+    isEmailVerified: true,
+    bio: 'System Administrator',
+    phoneNumber: undefined,
+    profileImageUrl: undefined,
+    googleId: undefined,
+    emailVerificationToken: undefined,
+    resetPasswordToken: undefined,
+    resetPasswordExpires: undefined,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    lastSeen: new Date(),
+    isOnline: false,
+    status: "Available",
+    theme: "light" as const,
+    language: "en",
+  };
   
+  users.set(adminId, adminUser);
+  console.log('✓ Created admin user: admin@chatgroove.com / admin123');
   const defaultRooms = [
     {
       name: "💬 General Chat",
@@ -562,8 +595,18 @@ export function initializeDefaultRooms(): void {
     },
   ];
 
-  // Initialize rooms
-  defaultRooms.forEach(room => {
-    storage.createChat(room);
+  // Create rooms directly in the global chats map
+  defaultRooms.forEach((room) => {
+    const roomId = `chat_${chatIdCounter++}`;
+    const chatRoom = {
+      _id: roomId,
+      ...room,
+      participants: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    chats.set(roomId, chatRoom);
   });
+  
+  console.log(`✓ Created ${defaultRooms.length} default global rooms`);
 }
