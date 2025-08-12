@@ -503,6 +503,26 @@ export class MemoryStorage implements IStorage {
     }
     return undefined;
   }
+
+  async updateUser(userId: string, updates: Partial<UserProfile & { 
+    isRestricted?: boolean; 
+    isBanned?: boolean; 
+    restrictionReason?: string; 
+    banReason?: string;
+    restrictedAt?: Date;
+    bannedAt?: Date;
+  }>): Promise<UserProfile | undefined> {
+    const user = users.get(userId);
+    if (user) {
+      Object.assign(user, updates);
+      user.updatedAt = new Date();
+      users.set(userId, user);
+      
+      const { password, emailVerificationToken, resetPasswordToken, resetPasswordExpires, ...userProfile } = user;
+      return userProfile as UserProfile;
+    }
+    return undefined;
+  }
 }
 
 // Create a default set of global rooms and test admin user
@@ -533,6 +553,12 @@ export function initializeDefaultRooms(): void {
     status: "Available",
     theme: "light" as const,
     language: "en",
+    isRestricted: false,
+    isBanned: false,
+    restrictionReason: undefined,
+    banReason: undefined,
+    restrictedAt: undefined,
+    bannedAt: undefined,
   };
   
   users.set(adminId, adminUser);

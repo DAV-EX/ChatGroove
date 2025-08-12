@@ -345,6 +345,82 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Admin: Restrict user
+  app.patch('/api/admin/users/:userId/restrict', authenticateAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { reason } = req.body;
+      const user = await storage.getUser(req.params.userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      await storage.updateUser(req.params.userId, {
+        isRestricted: true,
+        restrictionReason: reason || 'No reason provided',
+        restrictedAt: new Date(),
+      });
+
+      res.json({ message: 'User restricted successfully' });
+    } catch (error) {
+      console.error('Restrict user error:', error);
+      res.status(500).json({ message: 'Failed to restrict user' });
+    }
+  });
+
+  // Admin: Unrestrict user
+  app.patch('/api/admin/users/:userId/unrestrict', authenticateAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      await storage.updateUser(req.params.userId, {
+        isRestricted: false,
+        restrictionReason: undefined,
+        restrictedAt: undefined,
+      });
+
+      res.json({ message: 'User unrestricted successfully' });
+    } catch (error) {
+      console.error('Unrestrict user error:', error);
+      res.status(500).json({ message: 'Failed to unrestrict user' });
+    }
+  });
+
+  // Admin: Ban user
+  app.patch('/api/admin/users/:userId/ban', authenticateAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { reason } = req.body;
+      const user = await storage.getUser(req.params.userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      await storage.updateUser(req.params.userId, {
+        isBanned: true,
+        banReason: reason || 'No reason provided',
+        bannedAt: new Date(),
+      });
+
+      res.json({ message: 'User banned successfully' });
+    } catch (error) {
+      console.error('Ban user error:', error);
+      res.status(500).json({ message: 'Failed to ban user' });
+    }
+  });
+
+  // Admin: Unban user
+  app.patch('/api/admin/users/:userId/unban', authenticateAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      await storage.updateUser(req.params.userId, {
+        isBanned: false,
+        banReason: undefined,
+        bannedAt: undefined,
+      });
+
+      res.json({ message: 'User unbanned successfully' });
+    } catch (error) {
+      console.error('Unban user error:', error);
+      res.status(500).json({ message: 'Failed to unban user' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
