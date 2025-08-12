@@ -1,199 +1,134 @@
-import { sql } from 'drizzle-orm';
-import {
-  index,
-  jsonb,
-  pgTable,
-  timestamp,
-  varchar,
-  text,
-  boolean,
-  uuid,
-  serial,
-  integer,
-} from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Session storage table for Replit Auth
-export const sessions = pgTable(
-  "sessions",
-  {
-    sid: varchar("sid").primaryKey(),
-    sess: jsonb("sess").notNull(),
-    expire: timestamp("expire").notNull(),
-  },
-  (table) => [index("IDX_session_expire").on(table.expire)],
-);
-
-// User storage table for Replit Auth
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique().notNull(), // Made required for email registration
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
-  username: varchar("username").unique(),
-  bio: text("bio"),
-  phoneNumber: varchar("phone_number").unique(), // New: for WhatsApp-like features
-  isOnline: boolean("is_online").default(false),
-  lastSeen: timestamp("last_seen").defaultNow(),
-  status: varchar("status").default("Available"), // New: custom status messages
-  theme: varchar("theme").default("light"), // New: user theme preference
-  language: varchar("language").default("en"), // New: language preference
-  isEmailVerified: boolean("is_email_verified").default(false), // New: email verification
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+// Zod schemas for validation
+export const userSchema = z.object({
+  _id: z.string().optional(),
+  email: z.string().email(),
+  username: z.string().min(3).max(30),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  password: z.string().min(6).optional(), // Optional for Google auth users
+  profileImageUrl: z.string().url().optional(),
+  bio: z.string().max(500).optional(),
+  phoneNumber: z.string().optional(),
+  isOnline: z.boolean().default(false),
+  lastSeen: z.date().default(() => new Date()),
+  status: z.string().default("Available"),
+  theme: z.enum(["light", "dark"]).default("light"),
+  language: z.string().default("en"),
+  isEmailVerified: z.boolean().default(false),
+  emailVerificationToken: z.string().optional(),
+  resetPasswordToken: z.string().optional(),
+  resetPasswordExpires: z.date().optional(),
+  googleId: z.string().optional(), // For Google OAuth
+  provider: z.enum(["email", "google"]).default("email"),
+  createdAt: z.date().default(() => new Date()),
+  updatedAt: z.date().default(() => new Date()),
 });
 
-// Chats table (for direct messages, group chats, and global rooms)
-export const chats = pgTable("chats", {
-  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: varchar("name"), // null for direct messages, name for groups/global rooms
-  description: text("description"),
-  imageUrl: varchar("image_url"),
-  isGroup: boolean("is_group").default(false),
-  isGlobalRoom: boolean("is_global_room").default(false), // New: for global chat rooms
-  category: varchar("category"), // New: categories like "General", "Gaming", "Music", etc.
-  maxMembers: integer("max_members").default(1000), // New: limit for global rooms
-  isPublic: boolean("is_public").default(true), // New: public/private rooms
-  createdBy: varchar("created_by").references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+export const chatSchema = z.object({
+  _id: z.string().optional(),
+  name: z.string().optional(),
+  description: z.string().optional(),
+  imageUrl: z.string().url().optional(),
+  isGroup: z.boolean().default(false),
+  isGlobalRoom: z.boolean().default(false),
+  category: z.string().optional(),
+  maxMembers: z.number().default(1000),
+  isPublic: z.boolean().default(true),
+  createdBy: z.string(),
+  participants: z.array(z.string()).default([]),
+  createdAt: z.date().default(() => new Date()),
+  updatedAt: z.date().default(() => new Date()),
 });
 
-// Chat participants table
-export const chatParticipants = pgTable("chat_participants", {
-  id: serial("id").primaryKey(),
-  chatId: uuid("chat_id").references(() => chats.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
-  role: varchar("role").default("member"), // admin, member
-  joinedAt: timestamp("joined_at").defaultNow(),
-  lastReadAt: timestamp("last_read_at"),
+export const messageSchema = z.object({
+  _id: z.string().optional(),
+  chatId: z.string(),
+  senderId: z.string(),
+  content: z.string().optional(),
+  messageType: z.enum(["text", "image", "file", "voice_note", "video_note", "video_call", "audio_call"]).default("text"),
+  fileUrl: z.string().url().optional(),
+  fileName: z.string().optional(),
+  duration: z.number().optional(),
+  thumbnailUrl: z.string().url().optional(),
+  replyToId: z.string().optional(),
+  readBy: z.array(z.object({
+    userId: z.string(),
+    readAt: z.date().default(() => new Date()),
+  })).default([]),
+  editedAt: z.date().optional(),
+  createdAt: z.date().default(() => new Date()),
 });
 
-// Messages table
-export const messages: any = pgTable("messages", {
-  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  chatId: uuid("chat_id").references(() => chats.id, { onDelete: "cascade" }),
-  senderId: varchar("sender_id").references(() => users.id, { onDelete: "cascade" }),
-  content: text("content"),
-  messageType: varchar("message_type").default("text"), // text, image, file, voice_note, video_note, video_call, audio_call
-  fileUrl: varchar("file_url"),
-  fileName: varchar("file_name"),
-  duration: integer("duration"), // New: for voice/video notes duration in seconds
-  thumbnailUrl: varchar("thumbnail_url"), // New: for video messages/calls
-  replyToId: uuid("reply_to_id"),
-  editedAt: timestamp("edited_at"),
-  createdAt: timestamp("created_at").defaultNow(),
+// Insert schemas (for API validation)
+export const insertUserSchema = userSchema.omit({
+  _id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSeen: true,
 });
 
-// Message read receipts
-export const messageReads = pgTable("message_reads", {
-  id: serial("id").primaryKey(),
-  messageId: uuid("message_id").references(() => messages.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
-  readAt: timestamp("read_at").defaultNow(),
-});
-
-// Relations
-export const usersRelations = relations(users, ({ many }) => ({
-  chatsCreated: many(chats),
-  chatParticipants: many(chatParticipants),
-  messagesSent: many(messages),
-  messageReads: many(messageReads),
-}));
-
-export const chatsRelations = relations(chats, ({ one, many }) => ({
-  creator: one(users, {
-    fields: [chats.createdBy],
-    references: [users.id],
-  }),
-  participants: many(chatParticipants),
-  messages: many(messages),
-}));
-
-export const chatParticipantsRelations = relations(chatParticipants, ({ one }) => ({
-  chat: one(chats, {
-    fields: [chatParticipants.chatId],
-    references: [chats.id],
-  }),
-  user: one(users, {
-    fields: [chatParticipants.userId],
-    references: [users.id],
-  }),
-}));
-
-export const messagesRelations = relations(messages, ({ one, many }) => ({
-  chat: one(chats, {
-    fields: [messages.chatId],
-    references: [chats.id],
-  }),
-  sender: one(users, {
-    fields: [messages.senderId],
-    references: [users.id],
-  }),
-  replyTo: one(messages, {
-    fields: [messages.replyToId],
-    references: [messages.id],
-  }),
-  reads: many(messageReads),
-}));
-
-export const messageReadsRelations = relations(messageReads, ({ one }) => ({
-  message: one(messages, {
-    fields: [messageReads.messageId],
-    references: [messages.id],
-  }),
-  user: one(users, {
-    fields: [messageReads.userId],
-    references: [users.id],
-  }),
-}));
-
-// Insert schemas
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
+export const insertChatSchema = chatSchema.omit({
+  _id: true,
   createdAt: true,
   updatedAt: true,
 });
 
-export const insertChatSchema = createInsertSchema(chats).omit({
-  id: true,
+export const insertMessageSchema = messageSchema.omit({
+  _id: true,
   createdAt: true,
-  updatedAt: true,
+  readBy: true,
 });
 
-export const insertMessageSchema = createInsertSchema(messages).omit({
-  id: true,
-  createdAt: true,
+// Auth schemas
+export const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
 });
 
-export const insertChatParticipantSchema = createInsertSchema(chatParticipants).omit({
-  id: true,
-  joinedAt: true,
+export const registerSchema = z.object({
+  email: z.string().email(),
+  username: z.string().min(3).max(30),
+  password: z.string().min(6),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string(),
+  password: z.string().min(6),
+});
+
+export const verifyEmailSchema = z.object({
+  token: z.string(),
 });
 
 // Types
-export type UpsertUser = typeof users.$inferInsert;
-export type User = typeof users.$inferSelect;
-export type Chat = typeof chats.$inferSelect;
+export type User = z.infer<typeof userSchema>;
+export type Chat = z.infer<typeof chatSchema>;
+export type Message = z.infer<typeof messageSchema>;
+export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertChat = z.infer<typeof insertChatSchema>;
-export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
-export type ChatParticipant = typeof chatParticipants.$inferSelect;
-export type InsertChatParticipant = z.infer<typeof insertChatParticipantSchema>;
-export type MessageRead = typeof messageReads.$inferSelect;
+export type LoginData = z.infer<typeof loginSchema>;
+export type RegisterData = z.infer<typeof registerSchema>;
 
 // Extended types for API responses
+export type UserProfile = Omit<User, 'password' | 'emailVerificationToken' | 'resetPasswordToken' | 'resetPasswordExpires'>;
+
 export type ChatWithParticipants = Chat & {
-  participants: (ChatParticipant & { user: User })[];
-  lastMessage?: Message & { sender: User };
+  participantDetails: UserProfile[];
+  lastMessage?: MessageWithSender;
   unreadCount?: number;
 };
 
 export type MessageWithSender = Message & {
-  sender: User;
-  replyTo?: Message & { sender: User };
+  sender: UserProfile;
+  replyTo?: MessageWithSender;
   isRead?: boolean;
 };

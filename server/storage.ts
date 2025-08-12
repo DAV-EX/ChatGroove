@@ -1,36 +1,35 @@
 import {
-  users,
-  chats,
-  messages,
-  chatParticipants,
-  messageReads,
   type User,
-  type UpsertUser,
+  type UserProfile,
   type Chat,
   type InsertChat,
   type Message,
   type InsertMessage,
-  type ChatParticipant,
-  type InsertChatParticipant,
   type ChatWithParticipants,
   type MessageWithSender,
 } from "@shared/schema";
-import { db } from "./db";
-import { eq, and, desc, sql, or, like, isNull, ne } from "drizzle-orm";
+import connectDB from "./db";
+import UserModel from "./models/User";
+import ChatModel from "./models/Chat";
+import MessageModel from "./models/Message";
+import mongoose from 'mongoose';
 
 export interface IStorage {
-  // User operations (mandatory for Replit Auth)
-  getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  // User operations
+  getUser(id: string): Promise<UserProfile | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(userData: Partial<User>): Promise<UserProfile>;
+  updateUser(id: string, userData: Partial<User>): Promise<UserProfile | undefined>;
   updateUserOnlineStatus(userId: string, isOnline: boolean): Promise<void>;
-  searchUsers(query: string, excludeUserId: string): Promise<User[]>;
+  searchUsers(query: string, excludeUserId: string): Promise<UserProfile[]>;
+  verifyUserEmail(userId: string): Promise<void>;
 
   // Chat operations
   createChat(chat: InsertChat): Promise<Chat>;
   getUserChats(userId: string): Promise<ChatWithParticipants[]>;
   getGlobalRooms(userId: string): Promise<ChatWithParticipants[]>;
   getChatById(chatId: string): Promise<ChatWithParticipants | undefined>;
-  addChatParticipant(participant: InsertChatParticipant): Promise<ChatParticipant>;
+  addChatParticipant(chatId: string, userId: string): Promise<void>;
   removeChatParticipant(chatId: string, userId: string): Promise<void>;
 
   // Message operations
@@ -44,385 +43,287 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // User operations
-  async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+  constructor() {
+    connectDB();
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return user;
+  // User operations
+  async getUser(id: string): Promise<UserProfile | undefined> {
+    try {
+      const user = await UserModel.findById(id).select('-password -emailVerificationToken -resetPasswordToken -resetPasswordExpires');
+      return user?.toJSON() as UserProfile;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    try {
+      const user = await UserModel.findOne({ email: email.toLowerCase() });
+      return user?.toObject() as User;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async createUser(userData: Partial<User>): Promise<UserProfile> {
+    const user = new UserModel(userData);
+    await user.save();
+    return user.toJSON() as UserProfile;
+  }
+
+  async updateUser(id: string, userData: Partial<User>): Promise<UserProfile | undefined> {
+    try {
+      const user = await UserModel.findByIdAndUpdate(
+        id,
+        { ...userData, updatedAt: new Date() },
+        { new: true }
+      ).select('-password -emailVerificationToken -resetPasswordToken -resetPasswordExpires');
+      
+      return user?.toJSON() as UserProfile;
+    } catch (error) {
+      return undefined;
+    }
   }
 
   async updateUserOnlineStatus(userId: string, isOnline: boolean): Promise<void> {
-    await db
-      .update(users)
-      .set({
-        isOnline,
-        lastSeen: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId));
+    await UserModel.findByIdAndUpdate(userId, {
+      isOnline,
+      lastSeen: new Date(),
+      updatedAt: new Date(),
+    });
   }
 
-  async searchUsers(query: string, excludeUserId: string): Promise<User[]> {
-    return await db
-      .select()
-      .from(users)
-      .where(
-        and(
-          or(
-            like(users.firstName, `%${query}%`),
-            like(users.lastName, `%${query}%`),
-            like(users.username, `%${query}%`),
-            like(users.email, `%${query}%`)
-          ),
-          ne(users.id, excludeUserId)
-        )
-      )
-      .limit(20);
+  async searchUsers(query: string, excludeUserId: string): Promise<UserProfile[]> {
+    const users = await UserModel.find({
+      $and: [
+        { _id: { $ne: excludeUserId } },
+        {
+          $or: [
+            { username: { $regex: query, $options: 'i' } },
+            { firstName: { $regex: query, $options: 'i' } },
+            { lastName: { $regex: query, $options: 'i' } },
+            { email: { $regex: query, $options: 'i' } }
+          ]
+        }
+      ]
+    })
+    .select('-password -emailVerificationToken -resetPasswordToken -resetPasswordExpires')
+    .limit(20);
+
+    return users.map(user => user.toJSON() as UserProfile);
+  }
+
+  async verifyUserEmail(userId: string): Promise<void> {
+    await UserModel.findByIdAndUpdate(userId, {
+      isEmailVerified: true,
+      emailVerificationToken: undefined,
+      updatedAt: new Date(),
+    });
   }
 
   // Chat operations
-  async createChat(chat: InsertChat): Promise<Chat> {
-    const [newChat] = await db.insert(chats).values(chat).returning();
-    return newChat;
+  async createChat(chatData: InsertChat): Promise<Chat> {
+    const chat = new ChatModel(chatData);
+    await chat.save();
+    return chat.toObject() as Chat;
   }
 
   async getUserChats(userId: string): Promise<ChatWithParticipants[]> {
-    const userChats = await db
-      .select({
-        chat: chats,
-        participant: chatParticipants,
-        user: users,
-      })
-      .from(chats)
-      .innerJoin(chatParticipants, eq(chats.id, chatParticipants.chatId))
-      .innerJoin(users, eq(chatParticipants.userId, users.id))
-      .where(
-        sql`${chats.id} IN (
-          SELECT ${chatParticipants.chatId} FROM ${chatParticipants} WHERE ${chatParticipants.userId} = ${userId}
-        )`
-      )
-      .orderBy(desc(chats.updatedAt));
+    const chats = await ChatModel.find({
+      participants: userId,
+      isGlobalRoom: false
+    })
+    .populate('participants', '-password -emailVerificationToken -resetPasswordToken -resetPasswordExpires')
+    .sort({ updatedAt: -1 });
 
-    // Group by chat and get last message + unread count
-    const chatMap = new Map<string, ChatWithParticipants>();
-    
-    for (const row of userChats) {
-      if (!chatMap.has(row.chat.id)) {
-        chatMap.set(row.chat.id, {
-          ...row.chat,
-          participants: [],
-          unreadCount: 0,
-        });
-      }
-      
-      const chat = chatMap.get(row.chat.id)!;
-      chat.participants.push({
-        ...row.participant,
-        user: row.user,
+    const chatsWithDetails: ChatWithParticipants[] = [];
+
+    for (const chat of chats) {
+      // Get last message
+      const lastMessage = await MessageModel.findOne({
+        chatId: chat._id
+      })
+      .populate('senderId', '-password -emailVerificationToken -resetPasswordToken -resetPasswordExpires')
+      .sort({ createdAt: -1 });
+
+      // Get unread count for user
+      const unreadCount = await MessageModel.countDocuments({
+        chatId: chat._id,
+        'readBy.userId': { $ne: userId }
+      });
+
+      chatsWithDetails.push({
+        ...chat.toObject(),
+        participantDetails: (chat as any).participants,
+        lastMessage: lastMessage ? {
+          ...lastMessage.toObject(),
+          sender: (lastMessage as any).senderId
+        } : undefined,
+        unreadCount
       });
     }
 
-    // Get last messages and unread counts for each chat
-    for (const chat of Array.from(chatMap.values())) {
-      // Get last message
-      const [lastMessage] = await db
-        .select({
-          message: messages,
-          sender: users,
-        })
-        .from(messages)
-        .innerJoin(users, eq(messages.senderId, users.id))
-        .where(eq(messages.chatId, chat.id))
-        .orderBy(desc(messages.createdAt))
-        .limit(1);
-
-      if (lastMessage) {
-        chat.lastMessage = {
-          ...lastMessage.message,
-          sender: lastMessage.sender,
-        };
-      }
-
-      // Get unread count
-      const [unreadResult] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(messages)
-        .leftJoin(
-          messageReads,
-          and(
-            eq(messageReads.messageId, messages.id),
-            eq(messageReads.userId, userId)
-          )
-        )
-        .where(
-          and(
-            eq(messages.chatId, chat.id),
-            isNull(messageReads.id)
-          )
-        );
-
-      chat.unreadCount = Number(unreadResult?.count || 0);
-    }
-
-    return Array.from(chatMap.values());
+    return chatsWithDetails;
   }
 
   async getGlobalRooms(userId: string): Promise<ChatWithParticipants[]> {
-    const rooms = await db
-      .select()
-      .from(chats)
-      .where(eq(chats.isGlobalRoom, true))
-      .orderBy(desc(chats.createdAt));
+    const rooms = await ChatModel.find({ 
+      isGlobalRoom: true,
+      isPublic: true 
+    })
+    .populate('participants', '-password -emailVerificationToken -resetPasswordToken -resetPasswordExpires')
+    .sort({ createdAt: -1 });
 
-    const roomsWithParticipants: ChatWithParticipants[] = [];
+    const roomsWithDetails: ChatWithParticipants[] = [];
 
     for (const room of rooms) {
-      // Get all participants for this room
-      const participants = await db
-        .select({
-          participant: chatParticipants,
-          user: users,
-        })
-        .from(chatParticipants)
-        .innerJoin(users, eq(chatParticipants.userId, users.id))
-        .where(eq(chatParticipants.chatId, room.id));
-
       // Get last message
-      const [lastMessage] = await db
-        .select({
-          message: messages,
-          sender: users,
-        })
-        .from(messages)
-        .innerJoin(users, eq(messages.senderId, users.id))
-        .where(eq(messages.chatId, room.id))
-        .orderBy(desc(messages.createdAt))
-        .limit(1);
+      const lastMessage = await MessageModel.findOne({
+        chatId: room._id
+      })
+      .populate('senderId', '-password -emailVerificationToken -resetPasswordToken -resetPasswordExpires')
+      .sort({ createdAt: -1 });
 
-      // Get unread count for this user
-      const [unreadResult] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(messages)
-        .leftJoin(
-          messageReads,
-          and(
-            eq(messageReads.messageId, messages.id),
-            eq(messageReads.userId, userId)
-          )
-        )
-        .where(
-          and(
-            eq(messages.chatId, room.id),
-            ne(messages.senderId, userId),
-            isNull(messageReads.id)
-          )
-        );
+      // Get unread count for user
+      const unreadCount = await MessageModel.countDocuments({
+        chatId: room._id,
+        senderId: { $ne: userId },
+        'readBy.userId': { $ne: userId }
+      });
 
-      roomsWithParticipants.push({
-        ...room,
-        participants: participants.map(p => ({
-          ...p.participant,
-          user: p.user,
-        })),
+      roomsWithDetails.push({
+        ...room.toObject(),
+        participantDetails: (room as any).participants,
         lastMessage: lastMessage ? {
-          ...lastMessage.message,
-          sender: lastMessage.sender,
+          ...lastMessage.toObject(),
+          sender: (lastMessage as any).senderId
         } : undefined,
-        unreadCount: Number(unreadResult?.count || 0),
+        unreadCount
       });
     }
 
-    return roomsWithParticipants;
+    return roomsWithDetails;
   }
 
   async getChatById(chatId: string): Promise<ChatWithParticipants | undefined> {
-    const chatData = await db
-      .select({
-        chat: chats,
-        participant: chatParticipants,
-        user: users,
-      })
-      .from(chats)
-      .leftJoin(chatParticipants, eq(chats.id, chatParticipants.chatId))
-      .leftJoin(users, eq(chatParticipants.userId, users.id))
-      .where(eq(chats.id, chatId));
+    try {
+      const chat = await ChatModel.findById(chatId)
+        .populate('participants', '-password -emailVerificationToken -resetPasswordToken -resetPasswordExpires');
 
-    if (chatData.length === 0) return undefined;
+      if (!chat) return undefined;
 
-    const chat = chatData[0].chat;
-    const participants = chatData
-      .filter(row => row.participant && row.user)
-      .map(row => ({
-        ...row.participant!,
-        user: row.user!,
-      }));
-
-    return {
-      ...chat,
-      participants,
-    };
+      return {
+        ...chat.toObject(),
+        participantDetails: (chat as any).participants
+      };
+    } catch (error) {
+      return undefined;
+    }
   }
 
-  async addChatParticipant(participant: InsertChatParticipant): Promise<ChatParticipant> {
-    const [newParticipant] = await db
-      .insert(chatParticipants)
-      .values(participant)
-      .returning();
-    return newParticipant;
+  async addChatParticipant(chatId: string, userId: string): Promise<void> {
+    await ChatModel.findByIdAndUpdate(chatId, {
+      $addToSet: { participants: userId },
+      updatedAt: new Date(),
+    });
   }
 
   async removeChatParticipant(chatId: string, userId: string): Promise<void> {
-    await db
-      .delete(chatParticipants)
-      .where(
-        and(
-          eq(chatParticipants.chatId, chatId),
-          eq(chatParticipants.userId, userId)
-        )
-      );
+    await ChatModel.findByIdAndUpdate(chatId, {
+      $pull: { participants: userId },
+      updatedAt: new Date(),
+    });
   }
 
   // Message operations
-  async createMessage(message: InsertMessage): Promise<Message> {
-    const [newMessage] = await db.insert(messages).values(message).returning();
+  async createMessage(messageData: InsertMessage): Promise<Message> {
+    const message = new MessageModel(messageData);
+    await message.save();
     
     // Update chat's updatedAt timestamp
-    await db
-      .update(chats)
-      .set({ updatedAt: new Date() })
-      .where(eq(chats.id, message.chatId));
+    await ChatModel.findByIdAndUpdate(messageData.chatId, {
+      updatedAt: new Date()
+    });
     
-    return newMessage;
+    return message.toObject() as Message;
   }
 
   async getChatMessages(chatId: string, userId: string, limit = 50): Promise<MessageWithSender[]> {
-    const chatMessages = await db
-      .select({
-        message: messages,
-        sender: users,
-        replyToMessage: sql`NULL`,
-        replyToSender: sql`NULL`,
-        read: messageReads,
-      })
-      .from(messages)
-      .innerJoin(users, eq(messages.senderId, users.id))
-      .leftJoin(
-        messageReads,
-        and(
-          eq(messageReads.messageId, messages.id),
-          eq(messageReads.userId, userId)
-        )
-      )
-      .where(eq(messages.chatId, chatId))
-      .orderBy(desc(messages.createdAt))
+    const messages = await MessageModel.find({ chatId })
+      .populate('senderId', '-password -emailVerificationToken -resetPasswordToken -resetPasswordExpires')
+      .populate('replyToId')
+      .sort({ createdAt: -1 })
       .limit(limit);
 
-    return chatMessages.map(row => ({
-      ...row.message,
-      sender: row.sender,
-      isRead: !!row.read,
-    })).reverse();
+    return messages.reverse().map(message => ({
+      ...message.toObject(),
+      sender: (message as any).senderId,
+      replyTo: (message as any).replyToId ? {
+        ...(message as any).replyToId.toObject(),
+        sender: (message as any).replyToId.senderId
+      } : undefined,
+      isRead: message.readBy?.some(read => read.userId === userId) || false
+    }));
   }
 
   async markMessageAsRead(messageId: string, userId: string): Promise<void> {
-    await db
-      .insert(messageReads)
-      .values({
-        messageId,
-        userId,
-      })
-      .onConflictDoNothing();
+    await MessageModel.findByIdAndUpdate(messageId, {
+      $addToSet: {
+        readBy: {
+          userId,
+          readAt: new Date()
+        }
+      }
+    });
   }
 
   async markChatMessagesAsRead(chatId: string, userId: string): Promise<void> {
-    // Get all unread messages in the chat
-    const unreadMessages = await db
-      .select({ id: messages.id })
-      .from(messages)
-      .leftJoin(
-        messageReads,
-        and(
-          eq(messageReads.messageId, messages.id),
-          eq(messageReads.userId, userId)
-        )
-      )
-      .where(
-        and(
-          eq(messages.chatId, chatId),
-          isNull(messageReads.id)
-        )
-      );
-
-    // Mark them as read
-    if (unreadMessages.length > 0) {
-      const readRecords = unreadMessages.map(msg => ({
-        messageId: msg.id,
-        userId,
-      }));
-
-      await db.insert(messageReads).values(readRecords).onConflictDoNothing();
-    }
+    await MessageModel.updateMany(
+      { 
+        chatId,
+        'readBy.userId': { $ne: userId }
+      },
+      {
+        $addToSet: {
+          readBy: {
+            userId,
+            readAt: new Date()
+          }
+        }
+      }
+    );
   }
 
   // Direct message helper
   async getOrCreateDirectChat(userId1: string, userId2: string): Promise<Chat> {
     // Find existing direct chat between these users
-    const existingChat = await db
-      .select({ chat: chats })
-      .from(chats)
-      .innerJoin(chatParticipants, eq(chats.id, chatParticipants.chatId))
-      .where(
-        and(
-          eq(chats.isGroup, false),
-          sql`${chats.id} IN (
-            SELECT cp1.chat_id 
-            FROM ${chatParticipants} cp1
-            INNER JOIN ${chatParticipants} cp2 ON cp1.chat_id = cp2.chat_id
-            WHERE cp1.user_id = ${userId1} AND cp2.user_id = ${userId2}
-            GROUP BY cp1.chat_id
-            HAVING COUNT(*) = 2
-          )`
-        )
-      )
-      .limit(1);
+    const existingChat = await ChatModel.findOne({
+      isGroup: false,
+      isGlobalRoom: false,
+      participants: { $all: [userId1, userId2], $size: 2 }
+    });
 
-    if (existingChat.length > 0) {
-      return existingChat[0].chat;
+    if (existingChat) {
+      return existingChat.toObject() as Chat;
     }
 
     // Create new direct chat
     const newChat = await this.createChat({
       isGroup: false,
+      isGlobalRoom: false,
       createdBy: userId1,
-    });
-
-    // Add both participants
-    await this.addChatParticipant({
-      chatId: newChat.id,
-      userId: userId1,
-    });
-
-    await this.addChatParticipant({
-      chatId: newChat.id,
-      userId: userId2,
+      participants: [userId1, userId2]
     });
 
     return newChat;
   }
 }
 
-export const storage = new DatabaseStorage();
+// Use memory storage for now due to MongoDB connection issues
+import { MemoryStorage, initializeDefaultRooms } from './memoryStorage';
+
+export const storage = new MemoryStorage();
+
+// Initialize default global rooms
+initializeDefaultRooms();

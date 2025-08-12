@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
 import { Sidebar } from "@/components/chat/sidebar";
 import { EnhancedChatArea } from "@/components/chat/enhanced-chat-area";
 import { ProfileModal } from "@/components/profile/profile-modal";
@@ -9,22 +10,15 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 export default function Home() {
   const [selectedChatId, setSelectedChatId] = useState<string>();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [, setLocation] = useLocation();
   const { user, isLoading } = useAuth();
-  const { toast } = useToast();
 
+  // Redirect to auth page if not logged in
   useEffect(() => {
     if (!isLoading && !user) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
+      setLocation("/auth");
     }
-  }, [user, isLoading, toast]);
+  }, [user, isLoading, setLocation]);
 
   if (isLoading) {
     return (
