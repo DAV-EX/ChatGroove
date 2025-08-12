@@ -103,8 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const googleAuthMutation = useMutation({
-    mutationFn: async (): Promise<AuthResponse> => {
-      const res = await apiRequest("POST", "/api/auth/google");
+    mutationFn: async (token: string): Promise<AuthResponse> => {
+      const res = await apiRequest("POST", "/api/auth/google", { token });
       return await res.json();
     },
     onSuccess: (response: AuthResponse) => {
@@ -158,7 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginMutation,
         logoutMutation,
         registerMutation,
-        googleAuthMutation,
+        googleAuthMutation: googleAuthMutation as any,
       }}
     >
       {children}

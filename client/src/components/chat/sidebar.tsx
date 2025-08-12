@@ -1,18 +1,29 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
 import { useTheme } from "@/components/ui/theme-provider";
 import { Search, Moon, Sun, Settings, LogOut, Users, Plus, Globe, Hash, Video, Phone, Mic, Headphones, MessageCircle, Compass, UserPlus, Sparkles } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { ChatGrooveLogo } from "@/components/ui/chatgroove-logo";
+import { z } from "zod";
 import type { ChatWithParticipants, User } from "@shared/schema";
+
+const createGroupSchema = z.object({
+  name: z.string().min(1, "Group name is required").max(50, "Group name must be less than 50 characters"),
+  description: z.string().optional(),
+});
 
 interface SidebarProps {
   selectedChatId?: string;
@@ -24,9 +35,18 @@ interface SidebarProps {
 export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUser }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchUsersQuery, setSearchUsersQuery] = useState("");
+  const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const createGroupForm = useForm<z.infer<typeof createGroupSchema>>({
+    resolver: zodResolver(createGroupSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  });
 
   const { data: chats = [], isLoading: chatsLoading } = useQuery<ChatWithParticipants[]>({
     queryKey: ["/api/chats"],
@@ -72,6 +92,54 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
       });
     },
   });
+
+  const createGroupMutation = useMutation({
+    mutationFn: async (groupData: z.infer<typeof createGroupSchema>) => {
+      const response = await apiRequest("POST", "/api/chats", { 
+        name: groupData.name,
+        description: groupData.description,
+        isGroup: true,
+        participants: [] 
+      });
+      return response.json();
+    },
+    onSuccess: (chat) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
+      setShowCreateGroupDialog(false);
+      createGroupForm.reset();
+      onSelectChat(chat._id);
+      toast({
+        title: "Group created!",
+        description: `${chat.name} has been created successfully.`,
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to create group",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onCreateGroup = async (data: z.infer<typeof createGroupSchema>) => {
+    try {
+      await createGroupMutation.mutateAsync(data);
+    } catch (error) {
+      // Error handling is done in the mutation
+    }
+  };
 
   const handleLogout = () => {
     window.location.href = "/api/logout";
@@ -411,21 +479,129 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
                 <Users className="w-5 h-5 text-orange-500" />
                 <h3 className="font-semibold text-gray-800 dark:text-white">Your Groups</h3>
               </div>
-              <Button size="sm" variant="outline" className="border-orange-200 text-orange-600 hover:bg-orange-50">
+              <Button size="sm" variant="outline" className="border-orange-200 text-orange-600 hover:bg-orange-50" onClick={() => setShowCreateGroupDialog(true)}>
                 <Plus className="w-4 h-4 mr-1" />
                 Create
               </Button>
             </div>
           </div>
           <ScrollArea className="h-full px-2">
-            <div className="p-4 text-center text-gray-500">
-              <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-sm">No groups yet</p>
-              <p className="text-xs text-gray-400 mt-1">Create or join groups to get started</p>
-            </div>
+            {filteredChats.filter(chat => chat.isGroup && !chat.isGlobalRoom).length === 0 ? (
+              <div className="p-4 text-center text-gray-500">
+                <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <p className="text-sm">No groups yet</p>
+                <p className="text-xs text-gray-400 mt-1">Create or join groups to get started</p>
+              </div>
+            ) : (
+              <div className="space-y-1 pb-4">
+                {filteredChats
+                  .filter(chat => chat.isGroup && !chat.isGlobalRoom)
+                  .map((group) => (
+                  <div
+                    key={group._id}
+                    onClick={() => onSelectChat(group._id!)}
+                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                      selectedChatId === group._id
+                        ? "bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800"
+                        : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="relative">
+                        <Avatar className="w-12 h-12">
+                          <AvatarImage src={group.imageUrl} />
+                          <AvatarFallback className="bg-gradient-to-r from-orange-400 to-red-500 text-white font-bold">
+                            <Users className="w-6 h-6" />
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                            {group.name}
+                          </h3>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                            👥 {group.participants?.length || 0} members
+                          </p>
+                          {group.unreadCount && group.unreadCount > 0 && (
+                            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs min-w-[1.5rem] h-6 flex items-center justify-center">
+                              {group.unreadCount > 99 ? "99+" : group.unreadCount}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </ScrollArea>
         </TabsContent>
       </Tabs>
+
+      {/* Create Group Dialog */}
+      <Dialog open={showCreateGroupDialog} onOpenChange={setShowCreateGroupDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Group</DialogTitle>
+          </DialogHeader>
+          <Form {...createGroupForm}>
+            <form onSubmit={createGroupForm.handleSubmit(onCreateGroup)} className="space-y-4">
+              <FormField
+                control={createGroupForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Group Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter group name..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createGroupForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="What's this group about?"
+                        className="resize-none"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex justify-end space-x-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setShowCreateGroupDialog(false)}
+                  disabled={createGroupMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={createGroupMutation.isPending}
+                  className="bg-orange-500 hover:bg-orange-600"
+                >
+                  {createGroupMutation.isPending ? "Creating..." : "Create Group"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -12,6 +12,20 @@ import { loginSchema, registerSchema, type LoginData, type RegisterData } from "
 import { useAuth } from "@/hooks/use-auth";
 import { Mail, Lock, User, ArrowRight, MessageSquare } from "lucide-react";
 
+// Extend Window type for Google OAuth
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: any) => void;
+          prompt: () => void;
+        };
+      };
+    };
+  }
+}
+
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [, setLocation] = useLocation();
@@ -66,12 +80,39 @@ export default function AuthPage() {
   };
 
   const handleGoogleAuth = async () => {
-    // For now, show a message about Google OAuth setup
-    toast({
-      title: "Google OAuth Setup",
-      description: "Google OAuth requires additional configuration. Please use email registration for now.",
-      variant: "destructive",
-    });
+    try {
+      // Load Google API script if not already loaded
+      if (!window.google) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://accounts.google.com/gsi/client';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+
+      // Initialize Google OAuth
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '1066977440073-3nb0oq5qcp70k0gfnb94o6f6c61kmboe.apps.googleusercontent.com',
+          callback: (response: any) => {
+            googleAuthMutation.mutate(response.credential);
+          }
+        });
+
+        // Prompt for one-tap sign-in or show popup
+        window.google.accounts.id.prompt();
+      }
+      
+    } catch (error) {
+      console.error('Google OAuth initialization error:', error);
+      toast({
+        title: "Google Sign-in Error",
+        description: "Failed to initialize Google sign-in. Please try again or use email registration.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
