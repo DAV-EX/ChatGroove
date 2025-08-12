@@ -17,7 +17,8 @@ import {
   Mic,
   Image as ImageIcon,
   File,
-  MapPin
+  MapPin,
+  Menu
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -31,9 +32,11 @@ import { formatDistanceToNow } from "date-fns";
 interface EnhancedChatAreaProps {
   chatId: string;
   currentUser: User | null;
+  onOpenMobileMenu?: () => void;
+  isMobileSidebarOpen?: boolean;
 }
 
-export function EnhancedChatArea({ chatId, currentUser }: EnhancedChatAreaProps) {
+export function EnhancedChatArea({ chatId, currentUser, onOpenMobileMenu, isMobileSidebarOpen }: EnhancedChatAreaProps) {
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -183,23 +186,35 @@ export function EnhancedChatArea({ chatId, currentUser }: EnhancedChatAreaProps)
   return (
     <div className="flex-1 flex flex-col bg-gradient-to-br from-white via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-black">
       {/* Chat Header */}
-      <div className="p-4 border-b border-purple-200 dark:border-purple-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-sm">
+      <div className="p-3 lg:p-4 border-b border-purple-200 dark:border-purple-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3 lg:space-x-4">
+            {/* Mobile Menu Button */}
+            {onOpenMobileMenu && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onOpenMobileMenu}
+                className="lg:hidden hover:bg-purple-100 dark:hover:bg-purple-900 text-purple-600 dark:text-purple-400"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            )}
+            
             <div className="relative">
-              <Avatar className="h-12 w-12 border-2 border-white dark:border-gray-700 shadow-lg">
+              <Avatar className="h-10 w-10 lg:h-12 lg:w-12 border-2 border-white dark:border-gray-700 shadow-lg">
                 <AvatarImage src={getChatAvatar(chat) || undefined} />
-                <AvatarFallback className="bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 text-white font-bold text-lg">
+                <AvatarFallback className="bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 text-white font-bold text-sm lg:text-lg">
                   {getChatInitials(chat)}
                 </AvatarFallback>
               </Avatar>
               {!isGroup && !isGlobalRoom && (
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-900" />
+                <div className="absolute -bottom-1 -right-1 w-3 h-3 lg:w-4 lg:h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-900" />
               )}
             </div>
             
             <div>
-              <h2 className="font-bold text-lg text-gray-900 dark:text-white">
+              <h2 className="font-bold text-base lg:text-lg text-gray-900 dark:text-white">
                 {getChatName(chat)}
               </h2>
               <div className="flex items-center space-x-2">
@@ -268,7 +283,7 @@ export function EnhancedChatArea({ chatId, currentUser }: EnhancedChatAreaProps)
                     </Avatar>
                   )}
                   
-                  <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-xs sm:max-w-md`}>
+                  <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[280px] sm:max-w-xs lg:max-w-md`}>
                     {!isOwn && showAvatar && (
                       <span className="text-xs text-gray-500 dark:text-gray-400 mb-1 px-2">
                         {msg.sender.firstName && msg.sender.lastName
@@ -304,26 +319,32 @@ export function EnhancedChatArea({ chatId, currentUser }: EnhancedChatAreaProps)
       </ScrollArea>
 
       {/* Message Input */}
-      <div className="p-4 border-t border-purple-200 dark:border-purple-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm">
-        <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2">
-            <Button type="button" variant="ghost" size="icon" className="text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900">
-              <Paperclip className="w-5 h-5" />
+      <div className="p-3 lg:p-4 border-t border-purple-200 dark:border-purple-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm">
+        <form onSubmit={handleSendMessage} className="flex items-center space-x-2 lg:space-x-3">
+          {/* Attachment buttons - hidden on mobile by default, shown on larger screens */}
+          <div className="hidden sm:flex items-center space-x-1 lg:space-x-2">
+            <Button type="button" variant="ghost" size="icon" className="text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900 w-8 h-8 lg:w-10 lg:h-10">
+              <Paperclip className="w-4 h-4 lg:w-5 lg:h-5" />
             </Button>
-            <Button type="button" variant="ghost" size="icon" className="text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900">
-              <ImageIcon className="w-5 h-5" />
+            <Button type="button" variant="ghost" size="icon" className="text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900 w-8 h-8 lg:w-10 lg:h-10">
+              <ImageIcon className="w-4 h-4 lg:w-5 lg:h-5" />
             </Button>
-            <Button type="button" variant="ghost" size="icon" className="text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900">
-              <Mic className="w-5 h-5" />
+            <Button type="button" variant="ghost" size="icon" className="text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900 w-8 h-8 lg:w-10 lg:h-10">
+              <Mic className="w-4 h-4 lg:w-5 lg:h-5" />
             </Button>
           </div>
+          
+          {/* Mobile attachment button */}
+          <Button type="button" variant="ghost" size="icon" className="sm:hidden text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900 w-8 h-8">
+            <Paperclip className="w-4 h-4" />
+          </Button>
           
           <div className="flex-1 relative">
             <Input
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Type a message..."
-              className="pl-4 pr-12 py-3 rounded-2xl bg-purple-50 dark:bg-gray-800 border-purple-200 dark:border-purple-700 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="pl-3 pr-10 py-2 lg:pl-4 lg:pr-12 lg:py-3 rounded-2xl bg-purple-50 dark:bg-gray-800 border-purple-200 dark:border-purple-700 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm lg:text-base"
               disabled={sendMessageMutation.isPending}
               data-testid="input-message"
             />
@@ -331,22 +352,22 @@ export function EnhancedChatArea({ chatId, currentUser }: EnhancedChatAreaProps)
               type="button"
               variant="ghost"
               size="icon"
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-900"
+              className="absolute right-1 lg:right-2 top-1/2 transform -translate-y-1/2 text-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-900 w-7 h-7 lg:w-8 lg:h-8"
             >
-              <Smile className="w-5 h-5" />
+              <Smile className="w-4 h-4 lg:w-5 lg:h-5" />
             </Button>
           </div>
           
           <Button
             type="submit"
             disabled={!message.trim() || sendMessageMutation.isPending}
-            className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 p-3"
+            className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 w-10 h-10 lg:w-12 lg:h-12 p-0 flex items-center justify-center"
             data-testid="button-send-message"
           >
             {sendMessageMutation.isPending ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 lg:w-5 lg:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
-              <Send className="w-5 h-5" />
+              <Send className="w-4 h-4 lg:w-5 lg:h-5" />
             )}
           </Button>
         </form>

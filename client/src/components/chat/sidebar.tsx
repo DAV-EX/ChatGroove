@@ -30,9 +30,10 @@ interface SidebarProps {
   onSelectChat: (chatId: string) => void;
   onShowProfile: () => void;
   currentUser: User;
+  onCloseMobile?: () => void;
 }
 
-export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUser }: SidebarProps) {
+export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUser, onCloseMobile }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchUsersQuery, setSearchUsersQuery] = useState("");
   const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
@@ -207,20 +208,31 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
   };
 
   return (
-    <div className="w-80 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-black border-r border-purple-200 dark:border-purple-800 flex flex-col h-full shadow-xl">
+    <div className="w-full h-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-black border-r border-purple-200 dark:border-purple-800 flex flex-col shadow-xl">
       {/* Header */}
-      <div className="p-6 border-b border-purple-200 dark:border-purple-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
+      <div className="p-4 lg:p-6 border-b border-purple-200 dark:border-purple-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+        <div className="flex items-center justify-between mb-4 lg:mb-6">
+          <div className="flex items-center space-x-3 lg:space-x-4">
             <ChatGrooveLogo size="md" animated={true} />
-            <Avatar className="h-10 w-10 cursor-pointer hover:ring-2 hover:ring-purple-500 transition-all ring-offset-2" onClick={onShowProfile}>
+            <Avatar className="h-8 w-8 lg:h-10 lg:w-10 cursor-pointer hover:ring-2 hover:ring-purple-500 transition-all ring-offset-2" onClick={onShowProfile}>
               <AvatarImage src={currentUser.profileImageUrl || undefined} />
-              <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white font-semibold">
+              <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white font-semibold text-sm lg:text-base">
                 {currentUser.firstName?.[0] || currentUser.email?.[0] || '?'}
               </AvatarFallback>
             </Avatar>
           </div>
           <div className="flex items-center space-x-1">
+            {/* Mobile Close Button */}
+            {onCloseMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onCloseMobile}
+                className="lg:hidden hover:bg-purple-100 dark:hover:bg-purple-900 text-purple-600 dark:text-purple-400"
+              >
+                ×
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -228,7 +240,7 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
               className="hover:bg-purple-100 dark:hover:bg-purple-900 text-purple-600 dark:text-purple-400"
               data-testid="button-toggle-theme"
             >
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {theme === "dark" ? <Sun className="h-3 w-3 lg:h-4 lg:w-4" /> : <Moon className="h-3 w-3 lg:h-4 lg:w-4" />}
             </Button>
             <Button 
               variant="ghost" 
@@ -237,7 +249,7 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
               className="text-red-500 hover:bg-red-100 dark:hover:bg-red-900"
               data-testid="button-logout"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-3 w-3 lg:h-4 lg:w-4" />
             </Button>
           </div>
         </div>
