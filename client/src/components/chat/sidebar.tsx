@@ -143,16 +143,14 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
       {/* Header */}
       <div className="p-6 border-b border-purple-200 dark:border-purple-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-4">
+            <ChatGrooveLogo size="md" animated={true} />
             <Avatar className="h-10 w-10 cursor-pointer hover:ring-2 hover:ring-purple-500 transition-all ring-offset-2" onClick={onShowProfile}>
               <AvatarImage src={currentUser.profileImageUrl || undefined} />
               <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white font-semibold">
                 {currentUser.firstName?.[0] || currentUser.email?.[0] || '?'}
               </AvatarFallback>
             </Avatar>
-            <div>
-              <ChatGrooveLogo size="sm" />
-            </div>
           </div>
           <div className="flex items-center space-x-1">
             <Button
