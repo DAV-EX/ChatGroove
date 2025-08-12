@@ -1,0 +1,356 @@
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { 
+  Send, 
+  Paperclip, 
+  Smile, 
+  MoreVertical,
+  Phone,
+  Video,
+  UserPlus,
+  Info,
+  Mic,
+  Image as ImageIcon,
+  File,
+  MapPin
+} from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import { MultimediaMessage } from "./multimedia-message";
+import { CallControls } from "./call-controls";
+import type { MessageWithSender, ChatWithParticipants, User } from "@shared/schema";
+import { formatDistanceToNow } from "date-fns";
+
+interface EnhancedChatAreaProps {
+  chatId: string;
+  currentUser: User | null;
+}
+
+export function EnhancedChatArea({ chatId, currentUser }: EnhancedChatAreaProps) {
+  const [message, setMessage] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  // If no user, don't render the component
+  if (!currentUser) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-900 dark:to-gray-800">
+        <div className="text-center">
+          <p className="text-gray-600 dark:text-gray-300">Please sign in to use ChatGroove</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Fetch chat details
+  const { data: chat, isLoading: chatLoading } = useQuery<ChatWithParticipants>({
+    queryKey: ['/api/chats', chatId],
+    enabled: !!chatId,
+  });
+
+  // Fetch messages
+  const { data: messages = [], isLoading: messagesLoading, refetch } = useQuery<MessageWithSender[]>({
+    queryKey: ['/api/chats', chatId, 'messages'],
+    enabled: !!chatId,
+  });
+
+  // Send message mutation
+  const sendMessageMutation = useMutation({
+    mutationFn: async ({ content, messageType = 'text' }: { content: string; messageType?: string }) => {
+      return await apiRequest(`/api/chats/${chatId}/messages`, 'POST', { content, messageType });
+    },
+    onSuccess: () => {
+      setMessage("");
+      queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!message.trim()) return;
+    
+    sendMessageMutation.mutate({ content: message.trim() });
+  };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Auto-refresh messages every 3 seconds
+  useEffect(() => {
+    if (!chatId) return;
+    
+    const interval = setInterval(() => {
+      refetch();
+    }, 3000);
+    
+    return () => clearInterval(interval);
+  }, [chatId, refetch]);
+
+  const getChatName = (chat: ChatWithParticipants | undefined) => {
+    if (!chat) return 'Unknown Chat';
+    if (chat?.name) return chat.name;
+    
+    const otherParticipants = chat?.participants?.filter(p => p.userId !== currentUser.id) || [];
+    if (otherParticipants.length === 1) {
+      const user = otherParticipants[0].user;
+      return user.firstName && user.lastName
+        ? `${user.firstName} ${user.lastName}`
+        : user.firstName || user.email || 'Unknown User';
+    }
+    
+    return `Group Chat (${otherParticipants.length + 1})`;
+  };
+
+  const getChatAvatar = (chat: ChatWithParticipants | undefined) => {
+    if (!chat) return undefined;
+    if (chat?.imageUrl) return chat.imageUrl;
+    
+    const otherParticipants = chat?.participants?.filter(p => p.userId !== currentUser.id) || [];
+    if (otherParticipants.length === 1) {
+      return otherParticipants[0].user.profileImageUrl;
+    }
+    
+    return undefined;
+  };
+
+  const getChatInitials = (chat: ChatWithParticipants | undefined) => {
+    const name = getChatName(chat);
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  };
+
+  if (chatLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-900 dark:to-gray-800">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading chat...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!chat) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-900 dark:to-gray-800">
+        <div className="text-center max-w-md">
+          <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Smile className="w-12 h-12 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Welcome to ChatGroove</h2>
+          <p className="text-gray-600 dark:text-gray-300">Select a chat or global room to start messaging</p>
+        </div>
+      </div>
+    );
+  }
+
+  const isGroup = (chat?.participants?.length || 0) > 2;
+  const otherParticipants = chat?.participants?.filter(p => p.userId !== currentUser.id) || [];
+  const isGlobalRoom = chat?.isGlobalRoom;
+
+  return (
+    <div className="flex-1 flex flex-col bg-gradient-to-br from-white via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-black">
+      {/* Chat Header */}
+      <div className="p-4 border-b border-purple-200 dark:border-purple-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="relative">
+              <Avatar className="h-12 w-12 border-2 border-white dark:border-gray-700 shadow-lg">
+                <AvatarImage src={getChatAvatar(chat) || undefined} />
+                <AvatarFallback className="bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 text-white font-bold text-lg">
+                  {getChatInitials(chat)}
+                </AvatarFallback>
+              </Avatar>
+              {!isGroup && !isGlobalRoom && (
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-900" />
+              )}
+            </div>
+            
+            <div>
+              <h2 className="font-bold text-lg text-gray-900 dark:text-white">
+                {getChatName(chat)}
+              </h2>
+              <div className="flex items-center space-x-2">
+                {isGlobalRoom ? (
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="outline" className="bg-green-50 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700">
+                      Global Room
+                    </Badge>
+                    <span className="text-sm text-gray-500">
+                      {chat.participants?.length || 0} members
+                    </span>
+                  </div>
+                ) : isGroup ? (
+                  <span className="text-sm text-gray-500">
+                    {otherParticipants.length + 1} members
+                  </span>
+                ) : (
+                  <span className="text-sm text-green-600 dark:text-green-400 font-medium">
+                    🟢 Online
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            {!isGroup && !isGlobalRoom && <CallControls chatId={chatId} recipientName={getChatName(chat)} />}
+            <Button variant="ghost" size="icon" className="text-purple-600 dark:text-purple-400">
+              <Info className="w-5 h-5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-gray-600 dark:text-gray-400">
+              <MoreVertical className="w-5 h-5" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Messages Area */}
+      <ScrollArea className="flex-1 p-4 chatgroove-scrollbar">
+        <div className="space-y-4 max-w-4xl mx-auto">
+          {messagesLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-200 to-pink-200 dark:from-purple-800 dark:to-pink-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Smile className="w-8 h-8 text-purple-600 dark:text-purple-300" />
+              </div>
+              <p className="text-gray-500 dark:text-gray-400">No messages yet</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Be the first to say hello!</p>
+            </div>
+          ) : (
+            messages.map((msg: MessageWithSender, index: number) => {
+              const isOwn = msg.senderId === currentUser.id;
+              const showAvatar = index === 0 || messages[index - 1]?.senderId !== msg.senderId;
+              
+              return (
+                <div key={msg.id} className={`flex items-end space-x-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                  {!isOwn && showAvatar && (
+                    <Avatar className="h-8 w-8 mb-1 border border-white dark:border-gray-700">
+                      <AvatarImage src={msg.sender.profileImageUrl || undefined} />
+                      <AvatarFallback className="bg-gradient-to-br from-gray-500 to-gray-600 text-white text-sm">
+                        {msg.sender.firstName?.[0] || msg.sender.email?.[0] || '?'}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  
+                  <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-xs sm:max-w-md`}>
+                    {!isOwn && showAvatar && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400 mb-1 px-2">
+                        {msg.sender.firstName && msg.sender.lastName
+                          ? `${msg.sender.firstName} ${msg.sender.lastName}`
+                          : msg.sender.firstName || msg.sender.email}
+                      </span>
+                    )}
+                    
+                    {msg.messageType !== 'text' ? (
+                      <MultimediaMessage message={msg} isOwn={isOwn} />
+                    ) : (
+                      <div className={`message-bubble p-3 ${isOwn ? 'own' : ''} ${
+                        isOwn 
+                          ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' 
+                          : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 shadow-sm'
+                      }`}>
+                        <p className="text-sm leading-relaxed">{msg.content}</p>
+                      </div>
+                    )}
+                    
+                    <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 px-2">
+                      {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
+                    </span>
+                  </div>
+                  
+                  {!isOwn && !showAvatar && <div className="w-8" />}
+                </div>
+              );
+            })
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+      </ScrollArea>
+
+      {/* Message Input */}
+      <div className="p-4 border-t border-purple-200 dark:border-purple-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm">
+        <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
+            <Button type="button" variant="ghost" size="icon" className="text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900">
+              <Paperclip className="w-5 h-5" />
+            </Button>
+            <Button type="button" variant="ghost" size="icon" className="text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900">
+              <ImageIcon className="w-5 h-5" />
+            </Button>
+            <Button type="button" variant="ghost" size="icon" className="text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900">
+              <Mic className="w-5 h-5" />
+            </Button>
+          </div>
+          
+          <div className="flex-1 relative">
+            <Input
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Type a message..."
+              className="pl-4 pr-12 py-3 rounded-2xl bg-purple-50 dark:bg-gray-800 border-purple-200 dark:border-purple-700 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              disabled={sendMessageMutation.isPending}
+              data-testid="input-message"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-900"
+            >
+              <Smile className="w-5 h-5" />
+            </Button>
+          </div>
+          
+          <Button
+            type="submit"
+            disabled={!message.trim() || sendMessageMutation.isPending}
+            className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 p-3"
+            data-testid="button-send-message"
+          >
+            {sendMessageMutation.isPending ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}

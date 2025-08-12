@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTheme } from "@/components/ui/theme-provider";
-import { Search, Moon, Sun, Settings, LogOut, Users, Plus, Globe, Hash, Video, Phone, Mic, Headphones, MessageCircle } from "lucide-react";
+import { Search, Moon, Sun, Settings, LogOut, Users, Plus, Globe, Hash, Video, Phone, Mic, Headphones, MessageCircle, Compass, UserPlus, Sparkles } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { ChatGrooveLogo } from "@/components/ui/chatgroove-logo";
 import type { ChatWithParticipants, User } from "@shared/schema";
 
 interface SidebarProps {
@@ -138,21 +139,19 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
   };
 
   return (
-    <div className="w-80 bg-white dark:bg-telegram-dark-secondary border-r border-gray-200 dark:border-gray-700 flex flex-col h-full">
+    <div className="w-80 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-black border-r border-purple-200 dark:border-purple-800 flex flex-col h-full shadow-xl">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-4">
+      <div className="p-6 border-b border-purple-200 dark:border-purple-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
-            <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-telegram-blue transition-all" onClick={onShowProfile}>
+            <Avatar className="h-10 w-10 cursor-pointer hover:ring-2 hover:ring-purple-500 transition-all ring-offset-2" onClick={onShowProfile}>
               <AvatarImage src={currentUser.profileImageUrl || undefined} />
-              <AvatarFallback className="bg-telegram-blue text-white">
+              <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white font-semibold">
                 {currentUser.firstName?.[0] || currentUser.email?.[0] || '?'}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h2 className="text-lg font-semibold bg-gradient-to-r from-telegram-blue to-purple-600 bg-clip-text text-transparent">
-                ChatGroove
-              </h2>
+              <ChatGrooveLogo size="sm" />
             </div>
           </div>
           <div className="flex items-center space-x-1">
@@ -160,6 +159,7 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
               variant="ghost"
               size="icon"
               onClick={toggleTheme}
+              className="hover:bg-purple-100 dark:hover:bg-purple-900 text-purple-600 dark:text-purple-400"
               data-testid="button-toggle-theme"
             >
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -168,7 +168,7 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
               variant="ghost" 
               size="icon" 
               onClick={handleLogout} 
-              className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
+              className="text-red-500 hover:bg-red-100 dark:hover:bg-red-900"
               data-testid="button-logout"
             >
               <LogOut className="h-4 w-4" />
@@ -178,27 +178,27 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
         
         {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-400 h-4 w-4" />
           <Input
             type="text"
             placeholder="Search chats and rooms..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-gray-100 dark:bg-telegram-dark-tertiary border-0 rounded-xl"
+            className="pl-12 bg-purple-50 dark:bg-gray-800 border border-purple-200 dark:border-purple-700 rounded-2xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder:text-purple-400"
             data-testid="input-search-messages"
           />
         </div>
 
         {/* User Search */}
-        <div className="mt-3">
+        <div className="mt-4">
           <div className="relative">
-            <Plus className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <UserPlus className="absolute left-4 top-1/2 transform -translate-y-1/2 text-green-500 h-4 w-4" />
             <Input
               type="text"
               placeholder="Search users to start chat..."
               value={searchUsersQuery}
               onChange={(e) => setSearchUsersQuery(e.target.value)}
-              className="pl-10 bg-gray-100 dark:bg-telegram-dark-tertiary border-0"
+              className="pl-12 bg-green-50 dark:bg-gray-800 border border-green-200 dark:border-green-700 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 placeholder:text-green-500"
               data-testid="input-search-users"
             />
           </div>
@@ -237,14 +237,18 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
 
       {/* Tabs for Chats and Global Rooms */}
       <Tabs defaultValue="chats" className="flex-1 flex flex-col">
-        <TabsList className="grid w-full grid-cols-2 mx-4 mb-2">
-          <TabsTrigger value="chats" className="flex items-center space-x-1">
+        <TabsList className="grid w-full grid-cols-3 mx-4 mb-4 bg-white dark:bg-gray-800 rounded-2xl p-1 shadow-lg border border-purple-100 dark:border-purple-800">
+          <TabsTrigger value="chats" className="flex items-center space-x-2 rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white">
             <MessageCircle className="w-4 h-4" />
-            <span>Chats</span>
+            <span className="font-medium">Chats</span>
           </TabsTrigger>
-          <TabsTrigger value="global" className="flex items-center space-x-1">
-            <Globe className="w-4 h-4" />
-            <span>Global</span>
+          <TabsTrigger value="global" className="flex items-center space-x-2 rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-blue-500 data-[state=active]:text-white">
+            <Compass className="w-4 h-4" />
+            <span className="font-medium">Discover</span>
+          </TabsTrigger>
+          <TabsTrigger value="groups" className="flex items-center space-x-2 rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-red-500 data-[state=active]:text-white">
+            <Users className="w-4 h-4" />
+            <span className="font-medium">Groups</span>
           </TabsTrigger>
         </TabsList>
         
@@ -321,7 +325,13 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
         </TabsContent>
         
         <TabsContent value="global" className="flex-1 mt-0">
-          <ScrollArea className="h-full">
+          <div className="p-4">
+            <div className="flex items-center space-x-2 mb-4">
+              <Sparkles className="w-5 h-5 text-yellow-500" />
+              <h3 className="font-semibold text-gray-800 dark:text-white">Discover Global Rooms</h3>
+            </div>
+          </div>
+          <ScrollArea className="h-full px-2">
             {globalRoomsLoading ? (
               <div className="p-4 text-center text-gray-500">Loading global rooms...</div>
             ) : globalRooms.length === 0 ? (
@@ -329,58 +339,92 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
                 No global rooms available
               </div>
             ) : (
-              globalRooms.map((room) => (
-                <div
-                  key={room.id}
-                  className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-600 transition-colors ${
-                    selectedChatId === room.id ? "bg-telegram-blue/10 dark:bg-telegram-blue/20" : ""
-                  }`}
-                  onClick={() => onSelectChat(room.id)}
-                  data-testid={`global-room-${room.id}`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <Avatar className="w-12 h-12">
-                      <AvatarImage src={room.imageUrl || undefined} />
-                      <AvatarFallback className="bg-gradient-to-r from-green-500 to-blue-500 text-white">
-                        {room.name?.includes('🌍') ? '🌍' :
-                         room.name?.includes('🎮') ? '🎮' :
-                         room.name?.includes('🎵') ? '🎵' :
-                         room.name?.includes('💼') ? '💼' :
-                         room.name?.includes('🎨') ? '🎨' :
-                         room.name?.includes('🍔') ? '🍔' :
-                         <Hash className="w-6 h-6" />}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-gray-900 dark:text-white truncate">
-                          {room.name}
-                        </h3>
-                        <Badge variant="secondary" className="text-xs">
-                          {room.category}
-                        </Badge>
+              <div className="space-y-2">
+                {globalRooms.map((room) => (
+                  <div
+                    key={room.id}
+                    className={`mx-2 p-4 rounded-2xl cursor-pointer transition-all hover:shadow-lg border ${
+                      selectedChatId === room.id 
+                        ? "bg-gradient-to-r from-green-100 to-blue-100 dark:from-green-900 dark:to-blue-900 border-green-300 dark:border-green-600 shadow-md" 
+                        : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-600"
+                    }`}
+                    onClick={() => onSelectChat(room.id)}
+                    data-testid={`global-room-${room.id}`}
+                  >
+                    <div className="flex items-start space-x-4">
+                      <div className="relative">
+                        <Avatar className="w-14 h-14 border-2 border-white dark:border-gray-700 shadow-lg">
+                          <AvatarImage src={room.imageUrl || undefined} />
+                          <AvatarFallback className="bg-gradient-to-br from-green-500 via-blue-500 to-purple-500 text-white text-lg font-bold">
+                            {room.name?.includes('🌍') ? '🌍' :
+                             room.name?.includes('🎮') ? '🎮' :
+                             room.name?.includes('🎵') ? '🎵' :
+                             room.name?.includes('💼') ? '💼' :
+                             room.name?.includes('🎨') ? '🎨' :
+                             room.name?.includes('🍔') ? '🍔' :
+                             <Hash className="w-7 h-7" />}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-800" />
                       </div>
                       
-                      <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                        {room.description}
-                      </p>
-                      
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-xs text-gray-500">
-                          {room.participants?.length || 0} members
-                        </span>
-                        {room.unreadCount && room.unreadCount > 0 && (
-                          <Badge className="bg-green-500 text-white text-xs min-w-[1.25rem] h-5 flex items-center justify-center">
-                            {room.unreadCount > 99 ? "99+" : room.unreadCount}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="font-bold text-gray-900 dark:text-white truncate text-lg">
+                            {room.name}
+                          </h3>
+                          <Badge variant="outline" className="bg-green-50 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700 font-medium">
+                            {room.category}
                           </Badge>
-                        )}
+                        </div>
+                        
+                        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-2">
+                          {room.description}
+                        </p>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+                              👥 {room.participants?.length || 0} members
+                            </span>
+                            <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                              🟢 Active
+                            </span>
+                          </div>
+                          {room.unreadCount && room.unreadCount > 0 && (
+                            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs min-w-[1.5rem] h-6 flex items-center justify-center animate-pulse">
+                              {room.unreadCount > 99 ? "99+" : room.unreadCount}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="groups" className="flex-1 mt-0">
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <Users className="w-5 h-5 text-orange-500" />
+                <h3 className="font-semibold text-gray-800 dark:text-white">Your Groups</h3>
+              </div>
+              <Button size="sm" variant="outline" className="border-orange-200 text-orange-600 hover:bg-orange-50">
+                <Plus className="w-4 h-4 mr-1" />
+                Create
+              </Button>
+            </div>
+          </div>
+          <ScrollArea className="h-full px-2">
+            <div className="p-4 text-center text-gray-500">
+              <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <p className="text-sm">No groups yet</p>
+              <p className="text-xs text-gray-400 mt-1">Create or join groups to get started</p>
+            </div>
           </ScrollArea>
         </TabsContent>
       </Tabs>

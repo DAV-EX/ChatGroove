@@ -1,203 +1,186 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: hsl(0, 0%, 100%);
-  --foreground: hsl(210, 25%, 7.8431%);
-  --card: hsl(180, 6.6667%, 97.0588%);
-  --card-foreground: hsl(210, 25%, 7.8431%);
-  --popover: hsl(0, 0%, 100%);
-  --popover-foreground: hsl(210, 25%, 7.8431%);
-  --primary: hsl(203.8863, 88.2845%, 53.1373%);
-  --primary-foreground: hsl(0, 0%, 100%);
-  --secondary: hsl(210, 25%, 7.8431%);
-  --secondary-foreground: hsl(0, 0%, 100%);
-  --muted: hsl(240, 1.9608%, 90%);
-  --muted-foreground: hsl(210, 25%, 7.8431%);
-  --accent: hsl(211.5789, 51.3514%, 92.7451%);
-  --accent-foreground: hsl(203.8863, 88.2845%, 53.1373%);
-  --destructive: hsl(356.3033, 90.5579%, 54.3137%);
-  --destructive-foreground: hsl(0, 0%, 100%);
-  --border: hsl(201.4286, 30.4348%, 90.9804%);
-  --input: hsl(200, 23.0769%, 97.4510%);
-  --ring: hsl(202.8169, 89.1213%, 53.1373%);
-  --chart-1: hsl(203.8863, 88.2845%, 53.1373%);
-  --chart-2: hsl(159.7826, 100%, 36.0784%);
-  --chart-3: hsl(42.0290, 92.8251%, 56.2745%);
-  --chart-4: hsl(147.1429, 78.5047%, 41.9608%);
-  --chart-5: hsl(341.4894, 75.2000%, 50.9804%);
-  --sidebar: hsl(180, 6.6667%, 97.0588%);
-  --sidebar-foreground: hsl(210, 25%, 7.8431%);
-  --sidebar-primary: hsl(203.8863, 88.2845%, 53.1373%);
-  --sidebar-primary-foreground: hsl(0, 0%, 100%);
-  --sidebar-accent: hsl(211.5789, 51.3514%, 92.7451%);
-  --sidebar-accent-foreground: hsl(203.8863, 88.2845%, 53.1373%);
-  --sidebar-border: hsl(205.0000, 25.0000%, 90.5882%);
-  --sidebar-ring: hsl(202.8169, 89.1213%, 53.1373%);
-  --font-sans: 'Inter', 'Open Sans', sans-serif;
-  --font-serif: Georgia, serif;
-  --font-mono: Menlo, monospace;
-  --radius: 1.3rem;
-  --shadow-2xs: 0px 2px 0px 0px hsl(202.8169, 89.1213%, 53.1373%, 0.00);
-  --shadow-xs: 0px 2px 0px 0px hsl(202.8169, 89.1213%, 53.1373%, 0.00);
-  --shadow-sm: 0px 2px 0px 0px hsl(202.8169, 89.1213%, 53.1373%, 0.00), 0px 1px 2px -1px hsl(202.8169, 89.1213%, 53.1373%, 0.00);
-  --shadow: 0px 2px 0px 0px hsl(202.8169, 89.1213%, 53.1373%, 0.00), 0px 1px 2px -1px hsl(202.8169, 89.1213%, 53.1373%, 0.00);
-  --shadow-md: 0px 2px 0px 0px hsl(202.8169, 89.1213%, 53.1373%, 0.00), 0px 2px 4px -1px hsl(202.8169, 89.1213%, 53.1373%, 0.00);
-  --shadow-lg: 0px 2px 0px 0px hsl(202.8169, 89.1213%, 53.1373%, 0.00), 0px 4px 6px -1px hsl(202.8169, 89.1213%, 53.1373%, 0.00);
-  --shadow-xl: 0px 2px 0px 0px hsl(202.8169, 89.1213%, 53.1373%, 0.00), 0px 8px 10px -1px hsl(202.8169, 89.1213%, 53.1373%, 0.00);
-  --shadow-2xl: 0px 2px 0px 0px hsl(202.8169, 89.1213%, 53.1373%, 0.00);
-  --tracking-normal: 0em;
-  --spacing: 0.25rem;
-  
-  /* Telegram-inspired colors */
-  --telegram-blue: hsl(209, 77%, 58%);
-  --telegram-blue-dark: hsl(209, 65%, 45%);
-  --telegram-gray: hsl(216, 12%, 96%);
-  --telegram-dark: hsl(0, 0%, 13%);
-  --telegram-dark-secondary: hsl(210, 11%, 17%);
-  --telegram-dark-tertiary: hsl(210, 11%, 11%);
-}
+@layer base {
+  :root {
+    /* ChatGroove Light Theme */
+    --background: 252 100% 99%;
+    --foreground: 224 71.4% 4.1%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220.9 39.3% 11%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 220 14.3% 95.9%;
+    --accent-foreground: 220.9 39.3% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 262.1 83.3% 57.8%;
+    --radius: 0.75rem;
+    
+    /* ChatGroove Custom Colors */
+    --chatgroove-purple: 262.1 83.3% 57.8%;
+    --chatgroove-pink: 330 81% 60%;
+    --chatgroove-blue: 217.2 91.2% 59.8%;
+    --chatgroove-green: 142.1 76.2% 36.3%;
+    --chatgroove-orange: 24.6 95% 53.1%;
+    --chatgroove-gradient-start: 262.1 83.3% 57.8%;
+    --chatgroove-gradient-end: 330 81% 60%;
+  }
 
-.dark {
-  --background: hsl(0, 0%, 0%);
-  --foreground: hsl(200, 6.6667%, 91.1765%);
-  --card: hsl(228, 9.8039%, 10%);
-  --card-foreground: hsl(0, 0%, 85.0980%);
-  --popover: hsl(0, 0%, 0%);
-  --popover-foreground: hsl(200, 6.6667%, 91.1765%);
-  --primary: hsl(203.7736, 87.6033%, 52.5490%);
-  --primary-foreground: hsl(0, 0%, 100%);
-  --secondary: hsl(195.0000, 15.3846%, 94.9020%);
-  --secondary-foreground: hsl(210, 25%, 7.8431%);
-  --muted: hsl(0, 0%, 9.4118%);
-  --muted-foreground: hsl(210, 3.3898%, 46.2745%);
-  --accent: hsl(205.7143, 70%, 7.8431%);
-  --accent-foreground: hsl(203.7736, 87.6033%, 52.5490%);
-  --destructive: hsl(356.3033, 90.5579%, 54.3137%);
-  --destructive-foreground: hsl(0, 0%, 100%);
-  --border: hsl(210, 5.2632%, 14.9020%);
-  --input: hsl(207.6923, 27.6596%, 18.4314%);
-  --ring: hsl(202.8169, 89.1213%, 53.1373%);
-  --chart-1: hsl(203.8863, 88.2845%, 53.1373%);
-  --chart-2: hsl(159.7826, 100%, 36.0784%);
-  --chart-3: hsl(42.0290, 92.8251%, 56.2745%);
-  --chart-4: hsl(147.1429, 78.5047%, 41.9608%);
-  --chart-5: hsl(341.4894, 75.2000%, 50.9804%);
-  --sidebar: hsl(228, 9.8039%, 10%);
-  --sidebar-foreground: hsl(0, 0%, 85.0980%);
-  --sidebar-primary: hsl(202.8169, 89.1213%, 53.1373%);
-  --sidebar-primary-foreground: hsl(0, 0%, 100%);
-  --sidebar-accent: hsl(205.7143, 70%, 7.8431%);
-  --sidebar-accent-foreground: hsl(203.7736, 87.6033%, 52.5490%);
-  --sidebar-border: hsl(205.7143, 15.7895%, 26.0784%);
-  --sidebar-ring: hsl(202.8169, 89.1213%, 53.1373%);
-  --font-sans: 'Inter', 'Open Sans', sans-serif;
-  --font-serif: Georgia, serif;
-  --font-mono: Menlo, monospace;
-  --radius: 1.3rem;
-  --shadow-2xs: 0px 2px 0px 0px hsl(202.8169, 89.1213%, 53.1373%, 0.00);
-  --shadow-xs: 0px 2px 0px 0px hsl(202.8169, 89.1213%, 53.1373%, 0.00);
-  --shadow-sm: 0px 2px 0px 0px hsl(202.8169, 89.1213%, 53.1373%, 0.00), 0px 1px 2px -1px hsl(202.8169, 89.1213%, 53.1373%, 0.00);
-  --shadow: 0px 2px 0px 0px hsl(202.8169, 89.1213%, 53.1373%, 0.00), 0px 1px 2px -1px hsl(202.8169, 89.1213%, 53.1373%, 0.00);
-  --shadow-md: 0px 2px 0px 0px hsl(202.8169, 89.1213%, 53.1373%, 0.00), 0px 2px 4px -1px hsl(202.8169, 89.1213%, 53.1373%, 0.00);
-  --shadow-lg: 0px 2px 0px 0px hsl(202.8169, 89.1213%, 53.1373%, 0.00), 0px 4px 6px -1px hsl(202.8169, 89.1213%, 53.1373%, 0.00);
-  --shadow-xl: 0px 2px 0px 0px hsl(202.8169, 89.1213%, 53.1373%, 0.00), 0px 8px 10px -1px hsl(202.8169, 89.1213%, 53.1373%, 0.00);
-  --shadow-2xl: 0px 2px 0px 0px hsl(202.8169, 89.1213%, 53.1373%, 0.00);
+  .dark {
+    /* ChatGroove Dark Theme */
+    --background: 224 71.4% 4.1%;
+    --foreground: 210 20% 98%;
+    --card: 224 71.4% 4.1%;
+    --card-foreground: 210 20% 98%;
+    --popover: 224 71.4% 4.1%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 263.4 70% 50.4%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 215 27.9% 16.9%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 215 27.9% 16.9%;
+    --muted-foreground: 217.9 10.6% 64.9%;
+    --accent: 215 27.9% 16.9%;
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 215 27.9% 16.9%;
+    --input: 215 27.9% 16.9%;
+    --ring: 263.4 70% 50.4%;
+    
+    /* ChatGroove Dark Custom Colors */
+    --chatgroove-purple: 263.4 70% 50.4%;
+    --chatgroove-pink: 330 81% 60%;
+    --chatgroove-blue: 217.2 91.2% 59.8%;
+    --chatgroove-green: 142.1 76.2% 36.3%;
+    --chatgroove-orange: 24.6 95% 53.1%;
+    --chatgroove-gradient-start: 263.4 70% 50.4%;
+    --chatgroove-gradient-end: 330 81% 60%;
+  }
 }
 
 @layer base {
   * {
     @apply border-border;
   }
-
   body {
-    @apply font-sans antialiased bg-background text-foreground;
-    font-family: var(--font-sans);
+    @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-@layer utilities {
-  .animate-fade-in {
-    animation: fadeIn 0.2s ease-out;
+@layer components {
+  /* ChatGroove Gradient Backgrounds */
+  .chatgroove-gradient {
+    background: linear-gradient(135deg, hsl(var(--chatgroove-gradient-start)) 0%, hsl(var(--chatgroove-gradient-end)) 100%);
   }
   
-  .animate-slide-in {
-    animation: slideIn 0.3s ease-out;
+  .chatgroove-gradient-purple {
+    background: linear-gradient(135deg, hsl(var(--chatgroove-purple)) 0%, hsl(var(--chatgroove-pink)) 100%);
   }
   
-  .animate-bounce-gentle {
-    animation: bounceGentle 0.5s ease-out;
+  .chatgroove-gradient-blue {
+    background: linear-gradient(135deg, hsl(var(--chatgroove-blue)) 0%, hsl(var(--chatgroove-purple)) 100%);
+  }
+  
+  .chatgroove-gradient-green {
+    background: linear-gradient(135deg, hsl(var(--chatgroove-green)) 0%, hsl(var(--chatgroove-blue)) 100%);
+  }
+  
+  .chatgroove-gradient-orange {
+    background: linear-gradient(135deg, hsl(var(--chatgroove-orange)) 0%, hsl(var(--chatgroove-pink)) 100%);
+  }
+  
+  /* ChatGroove Glass Effect */
+  .chatgroove-glass {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .dark .chatgroove-glass {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  /* ChatGroove Animations */
+  .chatgroove-bounce {
+    animation: chatgroove-bounce 0.6s infinite alternate;
+  }
+  
+  @keyframes chatgroove-bounce {
+    0% { transform: translateY(0px); }
+    100% { transform: translateY(-4px); }
+  }
+  
+  .chatgroove-pulse {
+    animation: chatgroove-pulse 2s infinite;
+  }
+  
+  @keyframes chatgroove-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  
+  /* ChatGroove Message Bubbles */
+  .message-bubble {
+    border-radius: 18px 18px 4px 18px;
+    max-width: 70%;
+    word-wrap: break-word;
+  }
+  
+  .message-bubble.own {
+    border-radius: 18px 18px 18px 4px;
+    margin-left: auto;
+  }
+  
+  /* Scrollbar Styling */
+  .chatgroove-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .chatgroove-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .chatgroove-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--chatgroove-purple) / 0.3);
+    border-radius: 3px;
+  }
+  
+  .chatgroove-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--chatgroove-purple) / 0.5);
   }
 }
 
-@keyframes fadeIn {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
+/* Legacy support for existing components */
+.telegram-blue {
+  @apply chatgroove-gradient-purple;
 }
 
-@keyframes slideIn {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(0); }
+.telegram-dark-primary {
+  @apply bg-gray-900 dark:bg-black;
 }
 
-@keyframes bounceGentle {
-  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-  40% { transform: translateY(-3px); }
-  60% { transform: translateY(-2px); }
+.telegram-dark-secondary {
+  @apply bg-gray-800 dark:bg-gray-900;
 }
 
-/* Telegram-inspired utility classes */
-.bg-telegram-blue {
-  background-color: var(--telegram-blue);
-}
-
-.bg-telegram-blue-dark {
-  background-color: var(--telegram-blue-dark);
-}
-
-.bg-telegram-gray {
-  background-color: var(--telegram-gray);
-}
-
-.bg-telegram-dark {
-  background-color: var(--telegram-dark);
-}
-
-.bg-telegram-dark-secondary {
-  background-color: var(--telegram-dark-secondary);
-}
-
-.bg-telegram-dark-tertiary {
-  background-color: var(--telegram-dark-tertiary);
-}
-
-.text-telegram-blue {
-  color: var(--telegram-blue);
-}
-
-.text-telegram-blue-dark {
-  color: var(--telegram-blue-dark);
-}
-
-.border-telegram-blue {
-  border-color: var(--telegram-blue);
-}
-
-.hover\:bg-telegram-blue:hover {
-  background-color: var(--telegram-blue);
-}
-
-.hover\:bg-telegram-blue-dark:hover {
-  background-color: var(--telegram-blue-dark);
-}
-
-.hover\:text-telegram-blue:hover {
-  color: var(--telegram-blue);
-}
-
-.focus\:ring-telegram-blue:focus {
-  --tw-ring-color: var(--telegram-blue);
+.telegram-dark-tertiary {
+  @apply bg-gray-700 dark:bg-gray-800;
 }

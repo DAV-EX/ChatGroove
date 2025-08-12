@@ -5,6 +5,9 @@ This is ChatGroove - a unique modern messaging application that combines the bes
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
+UI/UX Style: Modern, unique ChatGroove branding - NOT like Telegram. Should have its own distinct visual identity.
+Global Rooms: Large public rooms users can browse and join, different from regular groups/channels.
+Dark Theme: Beautiful, well-designed dark mode with proper contrast and modern styling.
 
 # System Architecture
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Sidebar } from "@/components/chat/sidebar";
-import { ChatArea } from "@/components/chat/chat-area";
+import { EnhancedChatArea } from "@/components/chat/enhanced-chat-area";
 import { ProfileModal } from "@/components/profile/profile-modal";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -49,18 +49,18 @@ export default function Home() {
         selectedChatId={selectedChatId}
         onSelectChat={setSelectedChatId}
         onShowProfile={() => setIsProfileModalOpen(true)}
-        currentUser={user!}
+        currentUser={user}
       />
       
-      <ChatArea
-        selectedChatId={selectedChatId || ""}
-        currentUser={user!}
+      <EnhancedChatArea
+        chatId={selectedChatId || ""}
+        currentUser={user}
       />
 
       <ProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
-        currentUser={user!}
+        currentUser={user}
       />
     </div>
   );
