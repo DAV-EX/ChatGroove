@@ -16,7 +16,7 @@ import {
   type MessageWithSender,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, or, like, isNull } from "drizzle-orm";
+import { eq, and, desc, sql, or, like, isNull, ne } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -87,7 +87,7 @@ export class DatabaseStorage implements IStorage {
             like(users.username, `%${query}%`),
             like(users.email, `%${query}%`)
           ),
-          eq(users.id, excludeUserId) === false
+          ne(users.id, excludeUserId)
         )
       )
       .limit(20);
@@ -136,7 +136,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Get last messages and unread counts for each chat
-    for (const chat of chatMap.values()) {
+    for (const chat of Array.from(chatMap.values())) {
       // Get last message
       const [lastMessage] = await db
         .select({

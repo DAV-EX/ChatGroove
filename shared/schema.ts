@@ -63,7 +63,7 @@ export const chatParticipants = pgTable("chat_participants", {
 });
 
 // Messages table
-export const messages = pgTable("messages", {
+export const messages: any = pgTable("messages", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   chatId: uuid("chat_id").references(() => chats.id, { onDelete: "cascade" }),
   senderId: varchar("sender_id").references(() => users.id, { onDelete: "cascade" }),
@@ -71,7 +71,7 @@ export const messages = pgTable("messages", {
   messageType: varchar("message_type").default("text"), // text, image, file
   fileUrl: varchar("file_url"),
   fileName: varchar("file_name"),
-  replyToId: uuid("reply_to_id").references(() => messages.id),
+  replyToId: uuid("reply_to_id"),
   editedAt: timestamp("edited_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });

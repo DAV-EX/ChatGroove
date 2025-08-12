@@ -49,18 +49,18 @@ export default function Home() {
         selectedChatId={selectedChatId}
         onSelectChat={setSelectedChatId}
         onShowProfile={() => setIsProfileModalOpen(true)}
-        currentUser={user}
+        currentUser={user!}
       />
       
       <ChatArea
         selectedChatId={selectedChatId || ""}
-        currentUser={user}
+        currentUser={user!}
       />
 
       <ProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
-        currentUser={user}
+        currentUser={user!}
       />
     </div>
   );

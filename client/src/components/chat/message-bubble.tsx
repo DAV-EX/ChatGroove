@@ -43,7 +43,7 @@ export function MessageBubble({ message, currentUser, showAvatar = true }: Messa
           </div>
           <div className="flex items-center justify-end mt-1 px-1 space-x-1">
             <span className="text-xs text-gray-500 dark:text-gray-400" data-testid={`message-time-${message.id}`}>
-              {formatTime(message.createdAt)}
+              {formatTime(message.createdAt!)}
             </span>
             {message.isRead ? (
               <CheckCheck className="w-3 h-3 text-telegram-blue" data-testid={`message-read-${message.id}`} />
@@ -84,7 +84,7 @@ export function MessageBubble({ message, currentUser, showAvatar = true }: Messa
         </div>
         <div className="flex items-center justify-between mt-1 px-1">
           <span className="text-xs text-gray-500 dark:text-gray-400" data-testid={`message-time-${message.id}`}>
-            {formatTime(message.createdAt)}
+            {formatTime(message.createdAt!)}
           </span>
         </div>
       </div>
