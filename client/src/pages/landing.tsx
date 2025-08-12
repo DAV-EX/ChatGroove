@@ -16,11 +16,11 @@ export default function Landing() {
             <Send className="w-12 h-12 text-white" />
           </div>
           <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-6">
-            Welcome to <span className="text-telegram-blue">TeleClone</span>
+            Welcome to <span className="text-telegram-blue">ChatGroove</span>
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-            A modern messaging platform built for seamless communication. 
-            Connect with friends, create groups, and share moments instantly.
+            Experience the future of messaging with global chat rooms, voice & video calls, 
+            audio notes, video messages, and seamless mobile experience.
           </p>
           <Button
             onClick={handleLogin}
@@ -74,10 +74,10 @@ export default function Landing() {
         {/* Call to Action */}
         <div className="text-center">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-            Ready to start messaging?
+            Ready to groove with the world?
           </h2>
           <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
-            Join TeleClone today and connect with people around the world.
+            Join ChatGroove today and experience messaging like never before.
           </p>
           <Button
             onClick={handleLogin}

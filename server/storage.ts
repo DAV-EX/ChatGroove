@@ -28,6 +28,7 @@ export interface IStorage {
   // Chat operations
   createChat(chat: InsertChat): Promise<Chat>;
   getUserChats(userId: string): Promise<ChatWithParticipants[]>;
+  getGlobalRooms(userId: string): Promise<ChatWithParticipants[]>;
   getChatById(chatId: string): Promise<ChatWithParticipants | undefined>;
   addChatParticipant(participant: InsertChatParticipant): Promise<ChatParticipant>;
   removeChatParticipant(chatId: string, userId: string): Promise<void>;
@@ -111,7 +112,7 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(users, eq(chatParticipants.userId, users.id))
       .where(
         sql`${chats.id} IN (
-          SELECT chat_id FROM ${chatParticipants} WHERE user_id = ${userId}
+          SELECT ${chatParticipants.chatId} FROM ${chatParticipants} WHERE ${chatParticipants.userId} = ${userId}
         )`
       )
       .orderBy(desc(chats.updatedAt));
@@ -178,6 +179,74 @@ export class DatabaseStorage implements IStorage {
     }
 
     return Array.from(chatMap.values());
+  }
+
+  async getGlobalRooms(userId: string): Promise<ChatWithParticipants[]> {
+    const rooms = await db
+      .select()
+      .from(chats)
+      .where(eq(chats.isGlobalRoom, true))
+      .orderBy(desc(chats.createdAt));
+
+    const roomsWithParticipants: ChatWithParticipants[] = [];
+
+    for (const room of rooms) {
+      // Get all participants for this room
+      const participants = await db
+        .select({
+          participant: chatParticipants,
+          user: users,
+        })
+        .from(chatParticipants)
+        .innerJoin(users, eq(chatParticipants.userId, users.id))
+        .where(eq(chatParticipants.chatId, room.id));
+
+      // Get last message
+      const [lastMessage] = await db
+        .select({
+          message: messages,
+          sender: users,
+        })
+        .from(messages)
+        .innerJoin(users, eq(messages.senderId, users.id))
+        .where(eq(messages.chatId, room.id))
+        .orderBy(desc(messages.createdAt))
+        .limit(1);
+
+      // Get unread count for this user
+      const [unreadResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(messages)
+        .leftJoin(
+          messageReads,
+          and(
+            eq(messageReads.messageId, messages.id),
+            eq(messageReads.userId, userId)
+          )
+        )
+        .where(
+          and(
+            eq(messages.chatId, room.id),
+            ne(messages.senderId, userId),
+            isNull(messageReads.id)
+          )
+        );
+
+      roomsWithParticipants.push({
+        ...room,
+        participants: participants.map(p => ({
+          ...p.participant,
+          user: p.user,
+        })),
+        lastMessage: lastMessage ? {
+          ...lastMessage.message,
+          sender: lastMessage.sender,
+        } : undefined,
+        unreadCount: Number(unreadResult?.count || 0),
+      });
+    }
+
+    return roomsWithParticipants;
   }
 
   async getChatById(chatId: string): Promise<ChatWithParticipants | undefined> {

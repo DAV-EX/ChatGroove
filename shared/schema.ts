@@ -9,6 +9,7 @@ import {
   boolean,
   uuid,
   serial,
+  integer,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -28,25 +29,34 @@ export const sessions = pgTable(
 // User storage table for Replit Auth
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(),
+  email: varchar("email").unique().notNull(), // Made required for email registration
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   username: varchar("username").unique(),
   bio: text("bio"),
+  phoneNumber: varchar("phone_number").unique(), // New: for WhatsApp-like features
   isOnline: boolean("is_online").default(false),
   lastSeen: timestamp("last_seen").defaultNow(),
+  status: varchar("status").default("Available"), // New: custom status messages
+  theme: varchar("theme").default("light"), // New: user theme preference
+  language: varchar("language").default("en"), // New: language preference
+  isEmailVerified: boolean("is_email_verified").default(false), // New: email verification
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Chats table (for both direct messages and group chats)
+// Chats table (for direct messages, group chats, and global rooms)
 export const chats = pgTable("chats", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: varchar("name"), // null for direct messages, name for groups
+  name: varchar("name"), // null for direct messages, name for groups/global rooms
   description: text("description"),
   imageUrl: varchar("image_url"),
   isGroup: boolean("is_group").default(false),
+  isGlobalRoom: boolean("is_global_room").default(false), // New: for global chat rooms
+  category: varchar("category"), // New: categories like "General", "Gaming", "Music", etc.
+  maxMembers: integer("max_members").default(1000), // New: limit for global rooms
+  isPublic: boolean("is_public").default(true), // New: public/private rooms
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -68,9 +78,11 @@ export const messages: any = pgTable("messages", {
   chatId: uuid("chat_id").references(() => chats.id, { onDelete: "cascade" }),
   senderId: varchar("sender_id").references(() => users.id, { onDelete: "cascade" }),
   content: text("content"),
-  messageType: varchar("message_type").default("text"), // text, image, file
+  messageType: varchar("message_type").default("text"), // text, image, file, voice_note, video_note, video_call, audio_call
   fileUrl: varchar("file_url"),
   fileName: varchar("file_name"),
+  duration: integer("duration"), // New: for voice/video notes duration in seconds
+  thumbnailUrl: varchar("thumbnail_url"), // New: for video messages/calls
   replyToId: uuid("reply_to_id"),
   editedAt: timestamp("edited_at"),
   createdAt: timestamp("created_at").defaultNow(),

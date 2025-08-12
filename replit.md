@@ -1,6 +1,6 @@
 # Overview
 
-This is a modern real-time messaging application built as a Telegram clone called "TeleClone". The application features a comprehensive chat system with direct messaging, user profiles, authentication, and a responsive UI. It's architected as a full-stack TypeScript application with a React frontend, Express backend, and PostgreSQL database using Drizzle ORM.
+This is ChatGroove - a unique modern messaging application that combines the best features from WhatsApp, Facebook Messenger, and Telegram with innovative additions. The app features global chat rooms, email registration, video/audio calls, voice/video notes, mobile-optimized UI, and social media-inspired interactions. It's architected as a full-stack TypeScript application with React frontend, Express backend, and PostgreSQL database using Drizzle ORM.
 
 # User Preferences
 

@@ -89,6 +89,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/chats/global', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const globalRooms = await storage.getGlobalRooms(userId);
+      res.json(globalRooms);
+    } catch (error) {
+      console.error("Error fetching global rooms:", error);
+      res.status(500).json({ message: "Failed to fetch global rooms" });
+    }
+  });
+
+  app.post('/api/chats/global/:roomId/join', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { roomId } = req.params;
+      
+      // Check if room exists and is global
+      const room = await storage.getChatById(roomId);
+      if (!room || !room.isGlobalRoom) {
+        return res.status(404).json({ message: "Global room not found" });
+      }
+      
+      // Check if user is already a participant
+      const isParticipant = room.participants.some(p => p.userId === userId);
+      if (isParticipant) {
+        return res.json({ message: "Already a member" });
+      }
+      
+      // Add user as participant
+      await storage.addChatParticipant({
+        chatId: roomId,
+        userId,
+        role: 'member',
+      });
+      
+      res.json({ message: "Joined global room successfully" });
+    } catch (error) {
+      console.error("Error joining global room:", error);
+      res.status(500).json({ message: "Failed to join global room" });
+    }
+  });
+
   app.post('/api/chats', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

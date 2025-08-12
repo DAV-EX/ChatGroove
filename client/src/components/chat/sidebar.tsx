@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTheme } from "@/components/ui/theme-provider";
-import { Search, Moon, Sun, Settings, LogOut, Users, Plus } from "lucide-react";
+import { Search, Moon, Sun, Settings, LogOut, Users, Plus, Globe, Hash, Video, Phone, Mic, Headphones, MessageCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -29,6 +30,11 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
   const { data: chats = [], isLoading: chatsLoading } = useQuery<ChatWithParticipants[]>({
     queryKey: ["/api/chats"],
     refetchInterval: 5000, // Poll for new messages
+  });
+
+  const { data: globalRooms = [], isLoading: globalRoomsLoading } = useQuery<ChatWithParticipants[]>({
+    queryKey: ["/api/chats/global"],
+    refetchInterval: 10000, // Poll for global rooms
   });
 
   const { data: searchResults = [] } = useQuery<User[]>({
@@ -136,33 +142,33 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
       {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Chats</h2>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
+            <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-telegram-blue transition-all" onClick={onShowProfile}>
+              <AvatarImage src={currentUser.profileImageUrl || undefined} />
+              <AvatarFallback className="bg-telegram-blue text-white">
+                {currentUser.firstName?.[0] || currentUser.email?.[0] || '?'}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="text-lg font-semibold bg-gradient-to-r from-telegram-blue to-purple-600 bg-clip-text text-transparent">
+                ChatGroove
+              </h2>
+            </div>
+          </div>
+          <div className="flex items-center space-x-1">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={toggleTheme}
               data-testid="button-toggle-theme"
             >
-              {theme === "dark" ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onShowProfile}
-              data-testid="button-show-profile"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="text-red-500 hover:text-red-600"
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleLogout} 
+              className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
               data-testid="button-logout"
             >
               <LogOut className="h-4 w-4" />
@@ -175,10 +181,10 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
             type="text"
-            placeholder="Search messages..."
+            placeholder="Search chats and rooms..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-gray-100 dark:bg-telegram-dark-tertiary border-0"
+            className="pl-10 bg-gray-100 dark:bg-telegram-dark-tertiary border-0 rounded-xl"
             data-testid="input-search-messages"
           />
         </div>
@@ -229,76 +235,155 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
         </div>
       </div>
 
-      {/* Chat List */}
-      <ScrollArea className="flex-1">
-        {chatsLoading ? (
-          <div className="p-4 text-center text-gray-500">Loading chats...</div>
-        ) : filteredChats.length === 0 ? (
-          <div className="p-4 text-center text-gray-500">
-            {searchQuery ? "No chats found" : "No chats yet. Start a conversation!"}
-          </div>
-        ) : (
-          filteredChats.map((chat) => (
-            <div
-              key={chat.id}
-              className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-600 transition-colors ${
-                selectedChatId === chat.id ? "bg-telegram-blue/10 dark:bg-telegram-blue/20" : ""
-              }`}
-              onClick={() => onSelectChat(chat.id)}
-              data-testid={`chat-item-${chat.id}`}
-            >
-              <div className="flex items-center space-x-3">
-                <div className="relative">
-                  <Avatar className="w-12 h-12">
-                    <AvatarImage src={getChatAvatar(chat) || undefined} />
-                    <AvatarFallback className={chat.isGroup ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white" : ""}>
-                      {chat.isGroup ? <Users className="w-5 h-5" /> : getChatInitials(chat)}
-                    </AvatarFallback>
-                  </Avatar>
-                  {!chat.isGroup && chat.participants.find(p => p.userId !== currentUser.id)?.user.isOnline && (
-                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-telegram-dark-secondary" />
-                  )}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium text-gray-900 dark:text-white truncate">
-                      {getChatName(chat)}
-                    </h3>
-                    {chat.lastMessage && (
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {formatTime(chat.lastMessage.createdAt!)}
-                      </span>
-                    )}
-                  </div>
-                  
-                  {chat.lastMessage && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                      {chat.lastMessage.senderId === currentUser.id ? "You: " : ""}
-                      {chat.lastMessage.content || (chat.lastMessage.messageType === "image" ? "📷 Image" : "📎 File")}
-                    </p>
-                  )}
-                  
-                  <div className="flex items-center justify-between mt-1">
-                    <div className="flex items-center space-x-1">
-                      {chat.isGroup && (
-                        <span className="text-xs text-gray-500">
-                          {chat.participants.length} members
-                        </span>
+      {/* Tabs for Chats and Global Rooms */}
+      <Tabs defaultValue="chats" className="flex-1 flex flex-col">
+        <TabsList className="grid w-full grid-cols-2 mx-4 mb-2">
+          <TabsTrigger value="chats" className="flex items-center space-x-1">
+            <MessageCircle className="w-4 h-4" />
+            <span>Chats</span>
+          </TabsTrigger>
+          <TabsTrigger value="global" className="flex items-center space-x-1">
+            <Globe className="w-4 h-4" />
+            <span>Global</span>
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="chats" className="flex-1 mt-0">
+          <ScrollArea className="h-full">
+            {chatsLoading ? (
+              <div className="p-4 text-center text-gray-500">Loading chats...</div>
+            ) : filteredChats.length === 0 ? (
+              <div className="p-4 text-center text-gray-500">
+                {searchQuery ? "No chats found" : "No chats yet. Start a conversation!"}
+              </div>
+            ) : (
+              filteredChats.map((chat) => (
+                <div
+                  key={chat.id}
+                  className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-600 transition-colors ${
+                    selectedChatId === chat.id ? "bg-telegram-blue/10 dark:bg-telegram-blue/20" : ""
+                  }`}
+                  onClick={() => onSelectChat(chat.id)}
+                  data-testid={`chat-item-${chat.id}`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="relative">
+                      <Avatar className="w-12 h-12">
+                        <AvatarImage src={getChatAvatar(chat) || undefined} />
+                        <AvatarFallback className={chat.isGroup ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white" : ""}>
+                          {chat.isGroup ? <Users className="w-5 h-5" /> : getChatInitials(chat)}
+                        </AvatarFallback>
+                      </Avatar>
+                      {!chat.isGroup && chat.participants.find(p => p.userId !== currentUser.id)?.user.isOnline && (
+                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-telegram-dark-secondary" />
                       )}
                     </div>
-                    {chat.unreadCount && chat.unreadCount > 0 && (
-                      <Badge className="bg-telegram-blue text-white text-xs min-w-[1.25rem] h-5 flex items-center justify-center">
-                        {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
-                      </Badge>
-                    )}
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-medium text-gray-900 dark:text-white truncate">
+                          {getChatName(chat)}
+                        </h3>
+                        {chat.lastMessage && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {formatTime(chat.lastMessage.createdAt!)}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {chat.lastMessage && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                          {chat.lastMessage.senderId === currentUser.id ? "You: " : ""}
+                          {chat.lastMessage.content || (chat.lastMessage.messageType === "image" ? "📷 Image" : "📎 File")}
+                        </p>
+                      )}
+                      
+                      <div className="flex items-center justify-between mt-1">
+                        <div className="flex items-center space-x-1">
+                          {chat.isGroup && (
+                            <span className="text-xs text-gray-500">
+                              {chat.participants.length} members
+                            </span>
+                          )}
+                        </div>
+                        {chat.unreadCount && chat.unreadCount > 0 && (
+                          <Badge className="bg-telegram-blue text-white text-xs min-w-[1.25rem] h-5 flex items-center justify-center">
+                            {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
+              ))
+            )}
+          </ScrollArea>
+        </TabsContent>
+        
+        <TabsContent value="global" className="flex-1 mt-0">
+          <ScrollArea className="h-full">
+            {globalRoomsLoading ? (
+              <div className="p-4 text-center text-gray-500">Loading global rooms...</div>
+            ) : globalRooms.length === 0 ? (
+              <div className="p-4 text-center text-gray-500">
+                No global rooms available
               </div>
-            </div>
-          ))
-        )}
-      </ScrollArea>
+            ) : (
+              globalRooms.map((room) => (
+                <div
+                  key={room.id}
+                  className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-600 transition-colors ${
+                    selectedChatId === room.id ? "bg-telegram-blue/10 dark:bg-telegram-blue/20" : ""
+                  }`}
+                  onClick={() => onSelectChat(room.id)}
+                  data-testid={`global-room-${room.id}`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={room.imageUrl || undefined} />
+                      <AvatarFallback className="bg-gradient-to-r from-green-500 to-blue-500 text-white">
+                        {room.name?.includes('🌍') ? '🌍' :
+                         room.name?.includes('🎮') ? '🎮' :
+                         room.name?.includes('🎵') ? '🎵' :
+                         room.name?.includes('💼') ? '💼' :
+                         room.name?.includes('🎨') ? '🎨' :
+                         room.name?.includes('🍔') ? '🍔' :
+                         <Hash className="w-6 h-6" />}
+                      </AvatarFallback>
+                    </Avatar>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-medium text-gray-900 dark:text-white truncate">
+                          {room.name}
+                        </h3>
+                        <Badge variant="secondary" className="text-xs">
+                          {room.category}
+                        </Badge>
+                      </div>
+                      
+                      <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                        {room.description}
+                      </p>
+                      
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-xs text-gray-500">
+                          {room.participants?.length || 0} members
+                        </span>
+                        {room.unreadCount && room.unreadCount > 0 && (
+                          <Badge className="bg-green-500 text-white text-xs min-w-[1.25rem] h-5 flex items-center justify-center">
+                            {room.unreadCount > 99 ? "99+" : room.unreadCount}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </ScrollArea>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
