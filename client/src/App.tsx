@@ -8,12 +8,14 @@ import { useAuth } from "@/hooks/useAuth";
 import Landing from "@/pages/landing";
 import Home from "@/pages/home";
 import NotFound from "@/pages/not-found";
+import { ChatInterfacesDemo } from "@/components/demo/chat-interfaces-demo";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
   return (
     <Switch>
+      <Route path="/demo" component={ChatInterfacesDemo} />
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
