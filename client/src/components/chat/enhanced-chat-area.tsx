@@ -18,7 +18,12 @@ import {
   Image as ImageIcon,
   File,
   MapPin,
-  Menu
+  Menu,
+  Users,
+  Settings,
+  MessageSquarePlus,
+  Search,
+  Globe
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -191,7 +196,7 @@ export function EnhancedChatArea({ chatId, currentUser, onOpenMobileMenu, isMobi
     if (!chat) return 'Unknown Chat';
     if (chat?.name) return chat.name;
     
-    const otherParticipants = chat?.participants?.filter(p => p.userId !== currentUser.id) || [];
+    const otherParticipants = chat?.participants?.filter(p => p.userId !== currentUser._id) || [];
     if (otherParticipants.length === 1) {
       const user = otherParticipants[0].user;
       return user.firstName && user.lastName
@@ -206,7 +211,7 @@ export function EnhancedChatArea({ chatId, currentUser, onOpenMobileMenu, isMobi
     if (!chat) return undefined;
     if (chat?.imageUrl) return chat.imageUrl;
     
-    const otherParticipants = chat?.participants?.filter(p => p.userId !== currentUser.id) || [];
+    const otherParticipants = chat?.participants?.filter(p => p.userId !== currentUser._id) || [];
     if (otherParticipants.length === 1) {
       return otherParticipants[0].user.profileImageUrl;
     }
@@ -233,19 +238,37 @@ export function EnhancedChatArea({ chatId, currentUser, onOpenMobileMenu, isMobi
   if (!chat) {
     return (
       <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-900 dark:to-gray-800">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-lg px-6">
           <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
             <Smile className="w-12 h-12 text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Welcome to ChatGroove</h2>
-          <p className="text-gray-600 dark:text-gray-300">Select a chat or global room to start messaging</p>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Welcome to ChatGroove!</h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-6">Choose how you'd like to get started:</p>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div className="p-4 bg-white/70 dark:bg-gray-800/70 rounded-xl border border-purple-200 dark:border-purple-700">
+              <Globe className="w-6 h-6 text-green-500 mx-auto mb-2" />
+              <h3 className="font-semibold text-sm mb-1">Join Global Rooms</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Connect with the community in public rooms</p>
+            </div>
+            <div className="p-4 bg-white/70 dark:bg-gray-800/70 rounded-xl border border-purple-200 dark:border-purple-700">
+              <MessageSquarePlus className="w-6 h-6 text-blue-500 mx-auto mb-2" />
+              <h3 className="font-semibold text-sm mb-1">Start Private Chat</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Search for users and start messaging</p>
+            </div>
+          </div>
+          
+          <p className="text-sm text-purple-600 dark:text-purple-400 flex items-center justify-center space-x-2">
+            <Menu className="w-4 h-4" />
+            <span>Use the menu button to access all features</span>
+          </p>
         </div>
       </div>
     );
   }
 
   const isGroup = (chat?.participants?.length || 0) > 2;
-  const otherParticipants = chat?.participants?.filter(p => p.userId !== currentUser.id) || [];
+  const otherParticipants = chat?.participants?.filter(p => p.userId !== currentUser._id) || [];
   const isGlobalRoom = chat?.isGlobalRoom;
 
   return (
@@ -254,13 +277,14 @@ export function EnhancedChatArea({ chatId, currentUser, onOpenMobileMenu, isMobi
       <div className="p-3 lg:p-4 border-b border-purple-200 dark:border-purple-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 lg:space-x-4">
-            {/* Mobile Menu Button */}
+            {/* Menu Button - Always Visible */}
             {onOpenMobileMenu && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={onOpenMobileMenu}
-                className="lg:hidden hover:bg-purple-100 dark:hover:bg-purple-900 text-purple-600 dark:text-purple-400"
+                className="hover:bg-purple-100 dark:hover:bg-purple-900 text-purple-600 dark:text-purple-400"
+                data-testid="button-menu"
               >
                 <Menu className="h-5 w-5" />
               </Button>
@@ -305,13 +329,54 @@ export function EnhancedChatArea({ chatId, currentUser, onOpenMobileMenu, isMobi
             </div>
           </div>
           
-          <div className="flex items-center space-x-2">
-            {!isGroup && !isGlobalRoom && <CallControls chatId={chatId} recipientName={getChatName(chat)} />}
-            <Button variant="ghost" size="icon" className="text-purple-600 dark:text-purple-400">
-              <Info className="w-5 h-5" />
+          <div className="flex items-center space-x-1 lg:space-x-2">
+            {/* Quick Action Buttons */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900"
+              title="Search messages"
+              data-testid="button-search"
+            >
+              <Search className="w-4 h-4 lg:w-5 lg:h-5" />
             </Button>
-            <Button variant="ghost" size="icon" className="text-gray-600 dark:text-gray-400">
-              <MoreVertical className="w-5 h-5" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900"
+              title="New chat"
+              data-testid="button-new-chat"
+            >
+              <MessageSquarePlus className="w-4 h-4 lg:w-5 lg:h-5" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900"
+              title="Global rooms"
+              data-testid="button-global-rooms"
+            >
+              <Globe className="w-4 h-4 lg:w-5 lg:h-5" />
+            </Button>
+            <Separator orientation="vertical" className="h-6 mx-1" />
+            {!isGroup && !isGlobalRoom && <CallControls chatId={chatId} recipientName={getChatName(chat)} />}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-purple-600 dark:text-purple-400"
+              title="Chat info"
+              data-testid="button-chat-info"
+            >
+              <Info className="w-4 h-4 lg:w-5 lg:h-5" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-gray-600 dark:text-gray-400"
+              title="More options"
+              data-testid="button-more-options"
+            >
+              <MoreVertical className="w-4 h-4 lg:w-5 lg:h-5" />
             </Button>
           </div>
         </div>
@@ -470,6 +535,19 @@ export function EnhancedChatArea({ chatId, currentUser, onOpenMobileMenu, isMobi
             </Button>
           )}
         </form>
+      </div>
+      
+      {/* Floating Action Button for Quick Navigation */}
+      <div className="fixed bottom-6 right-6 z-50 lg:hidden">
+        <Button
+          size="icon"
+          className="w-14 h-14 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-2xl hover:shadow-3xl transition-all duration-200 border-2 border-white dark:border-gray-800"
+          onClick={onOpenMobileMenu}
+          data-testid="button-fab-menu"
+          title="Open navigation menu"
+        >
+          <Menu className="w-6 h-6" />
+        </Button>
       </div>
     </div>
   );

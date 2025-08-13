@@ -286,10 +286,10 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
             <div className="mt-2 bg-white dark:bg-telegram-dark-tertiary rounded-lg border border-gray-200 dark:border-gray-600">
               {searchResults.map((user) => (
                 <div
-                  key={user.id}
+                  key={user._id}
                   className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-600 last:border-b-0"
-                  onClick={() => createDirectChatMutation.mutate(user.id)}
-                  data-testid={`button-start-chat-${user.id}`}
+                  onClick={() => createDirectChatMutation.mutate(user._id!)}
+                  data-testid={`button-start-chat-${user._id}`}
                 >
                   <div className="flex items-center space-x-3">
                     <Avatar className="w-8 h-8">
@@ -311,6 +311,75 @@ export function Sidebar({ selectedChatId, onSelectChat, onShowProfile, currentUs
               ))}
             </div>
           )}
+        </div>
+        
+        {/* Quick Actions */}
+        <div className="mt-4 p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30 rounded-2xl border border-purple-200 dark:border-purple-800">
+          <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 mb-2 text-center">Quick Actions</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Dialog open={showCreateGroupDialog} onOpenChange={setShowCreateGroupDialog}>
+              <DialogTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center space-x-1 text-xs bg-white/70 dark:bg-gray-800/70 hover:bg-purple-100 dark:hover:bg-purple-900 border-purple-200 dark:border-purple-700"
+                  data-testid="button-create-group"
+                >
+                  <Users className="w-3 h-3" />
+                  <span>New Group</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Create Group Chat</DialogTitle>
+                </DialogHeader>
+                <Form {...createGroupForm}>
+                  <form onSubmit={createGroupForm.handleSubmit((data) => createGroupMutation.mutate(data))} className="space-y-4">
+                    <FormField
+                      control={createGroupForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Group Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter group name..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={createGroupForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description (Optional)</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Enter group description..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" className="w-full" disabled={createGroupMutation.isPending}>
+                      {createGroupMutation.isPending ? "Creating..." : "Create Group"}
+                    </Button>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+            
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onShowProfile}
+              className="flex items-center space-x-1 text-xs bg-white/70 dark:bg-gray-800/70 hover:bg-green-100 dark:hover:bg-green-900 border-green-200 dark:border-green-700"
+              data-testid="button-profile-settings"
+            >
+              <Settings className="w-3 h-3" />
+              <span>Profile</span>
+            </Button>
+          </div>
         </div>
       </div>
 
