@@ -301,6 +301,71 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Posts routes (protected)
+  app.post('/api/posts', authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!._id!;
+      const { content } = req.body;
+      
+      if (!content?.trim()) {
+        return res.status(400).json({ message: "Content is required" });
+      }
+      
+      // For now, we'll simulate post creation
+      const post = {
+        id: Date.now().toString(),
+        content: content.trim(),
+        authorId: userId,
+        createdAt: new Date(),
+        likes: 0,
+        comments: []
+      };
+      
+      res.status(201).json(post);
+    } catch (error) {
+      console.error("Error creating post:", error);
+      res.status(500).json({ message: "Failed to create post" });
+    }
+  });
+
+  app.get('/api/posts', authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      // For now, return sample posts
+      const posts = [
+        {
+          id: "1",
+          content: "Welcome to ChatGroove! This is your social messaging platform.",
+          authorId: "system",
+          authorName: "ChatGroove Team",
+          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+          likes: 15,
+          comments: 3
+        }
+      ];
+      
+      res.json(posts);
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+      res.status(500).json({ message: "Failed to fetch posts" });
+    }
+  });
+
+  // User suggestions route (protected)
+  app.get('/api/users/suggested', authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!._id!;
+      
+      // Get recent users for suggestions (excluding current user)
+      const users = await storage.getAllUsers(10, 0);
+      const suggestedUsers = users.filter(user => user._id !== userId).slice(0, 5);
+      
+      res.json(suggestedUsers);
+    } catch (error) {
+      console.error("Error fetching suggested users:", error);
+      res.status(500).json({ message: "Failed to fetch suggested users" });
+    }
+  });
+
   // Admin routes (protected)
   app.get('/api/admin/stats', authenticateAdmin, async (req: AuthenticatedRequest, res) => {
     try {
