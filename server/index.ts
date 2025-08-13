@@ -1,7 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { seedGlobalRooms } from "./seedGlobalRooms";
+import { initializeDefaultRooms } from "./seedGlobalRooms";
 
 const app = express();
 app.use(express.json());
@@ -42,9 +42,9 @@ app.use((req, res, next) => {
 
   // Seed global rooms after database setup (skip if MongoDB unavailable)
   try {
-    await seedGlobalRooms();
+    await initializeDefaultRooms();
   } catch (error) {
-    console.log("MongoDB unavailable, skipping global rooms seeding");
+    console.log("Database unavailable, skipping global rooms seeding");
   }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

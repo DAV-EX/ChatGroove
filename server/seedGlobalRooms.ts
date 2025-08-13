@@ -1,99 +1,123 @@
-import connectDB from "./db";
-import ChatModel from "./models/Chat";
+import { db } from "./db";
+import { chats, users } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
-export async function seedGlobalRooms() {
+const globalRooms = [
+  {
+    name: "💬 General Chat",
+    description: "A place for everyone to chat about anything and everything",
+    category: "General",
+    isGroup: true,
+    isGlobalRoom: true,
+    isPublic: true,
+    maxMembers: 1000,
+  },
+  {
+    name: "🎮 Gaming Hub",
+    description: "Discuss your favorite games, find gaming partners, and share gaming tips",
+    category: "Gaming",
+    isGroup: true,
+    isGlobalRoom: true,
+    isPublic: true,
+    maxMembers: 1000,
+  },
+  {
+    name: "🎵 Music Lounge",
+    description: "Share your favorite music, discover new artists, and discuss all things musical",
+    category: "Music",
+    isGroup: true,
+    isGlobalRoom: true,
+    isPublic: true,
+    maxMembers: 1000,
+  },
+  {
+    name: "💻 Tech Talk",
+    description: "Discuss the latest in technology, programming, and digital innovations",
+    category: "Technology",
+    isGroup: true,
+    isGlobalRoom: true,
+    isPublic: true,
+    maxMembers: 1000,
+  },
+  {
+    name: "🎨 Creative Corner",
+    description: "Share your art, get feedback, and inspire each other's creativity",
+    category: "Creative",
+    isGroup: true,
+    isGlobalRoom: true,
+    isPublic: true,
+    maxMembers: 1000,
+  },
+  {
+    name: "🍕 Food & Travel",
+    description: "Share recipes, restaurant recommendations, and travel experiences",
+    category: "Food & Travel",
+    isGroup: true,
+    isGlobalRoom: true,
+    isPublic: true,
+    maxMembers: 1000,
+  },
+];
+
+export async function initializeDefaultRooms(): Promise<void> {
+  console.log('Initializing default global rooms...');
+  
   try {
-    await connectDB();
-    
-    // Check if global rooms already exist
-    const existingRooms = await ChatModel.findOne({ isGlobalRoom: true });
+    // Create a system user for creating rooms
+    const [systemUser] = await db.select()
+      .from(users)
+      .where(eq(users.email, 'system@chatgroove.com'))
+      .limit(1);
 
-    if (existingRooms) {
-      console.log("Global rooms already exist, skipping seed");
+    let systemUserId = systemUser?.id;
+
+    if (!systemUser) {
+      const [newSystemUser] = await db.insert(users)
+        .values({
+          email: 'system@chatgroove.com',
+          username: 'ChatGroove System',
+          firstName: 'ChatGroove',
+          lastName: 'System',
+          isEmailVerified: true,
+          role: 'admin',
+        })
+        .returning();
+      
+      systemUserId = newSystemUser.id;
+      console.log('Created system user');
+    }
+
+    // Check if global rooms already exist
+    const [existingRoom] = await db.select()
+      .from(chats)
+      .where(eq(chats.isGlobalRoom, true))
+      .limit(1);
+
+    if (existingRoom) {
+      console.log('Global rooms already exist, skipping initialization');
       return;
     }
 
-    console.log("Creating global chat rooms...");
+    // Create global rooms
+    for (const room of globalRooms) {
+      const [newRoom] = await db.insert(chats)
+        .values({
+          ...room,
+          createdBy: systemUserId!,
+          participants: [],
+        })
+        .returning();
+      
+      console.log(`Created global room: ${room.name}`);
+    }
 
-    const globalRooms = [
-      {
-        name: "🌍 General",
-        description: "General discussion for everyone",
-        category: "General",
-        isGroup: true,
-        isGlobalRoom: true,
-        isPublic: true,
-        maxMembers: 10000,
-        createdBy: "system", // We'll need to handle this properly
-        participants: [],
-        imageUrl: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=300&h=300&fit=crop&crop=center"
-      },
-      {
-        name: "🎮 Gaming",
-        description: "Talk about your favorite games and gaming experiences",
-        category: "Gaming",
-        isGroup: true,
-        isGlobalRoom: true,
-        isPublic: true,
-        maxMembers: 5000,
-        createdBy: "system",
-        participants: [],
-        imageUrl: "https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?w=300&h=300&fit=crop&crop=center"
-      },
-      {
-        name: "🎵 Music",
-        description: "Share your favorite music and discover new tracks",
-        category: "Music",
-        isGroup: true,
-        isGlobalRoom: true,
-        isPublic: true,
-        maxMembers: 5000,
-        createdBy: "system",
-        participants: [],
-        imageUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop&crop=center"
-      },
-      {
-        name: "💼 Technology",
-        description: "Discuss the latest in tech, programming, and innovation",
-        category: "Technology",
-        isGroup: true,
-        isGlobalRoom: true,
-        isPublic: true,
-        maxMembers: 3000,
-        createdBy: "system",
-        participants: [],
-        imageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=300&h=300&fit=crop&crop=center"
-      },
-      {
-        name: "🎨 Creative",
-        description: "Share your artwork, photography, and creative projects",
-        category: "Creative",
-        isGroup: true,
-        isGlobalRoom: true,
-        isPublic: true,
-        maxMembers: 2000,
-        createdBy: "system",
-        participants: [],
-        imageUrl: "https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=300&h=300&fit=crop&crop=center"
-      },
-      {
-        name: "🍔 Food & Travel",
-        description: "Share food pics, recipes, and travel adventures",
-        category: "Lifestyle",
-        isGroup: true,
-        isGlobalRoom: true,
-        isPublic: true,
-        maxMembers: 4000,
-        createdBy: "system",
-        participants: [],
-        imageUrl: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=300&h=300&fit=crop&crop=center"
-      }
-    ];
-
-    await ChatModel.insertMany(globalRooms);
-
-    console.log(`Created ${globalRooms.length} global chat rooms successfully!`);
+    console.log('✓ Default global rooms initialized successfully');
   } catch (error) {
-    console.error("Error seeding global rooms:", error);
+    console.error('Error initializing default rooms:', error);
   }
+}
+
+// Auto-initialize when imported
+if (import.meta.url === `file://${process.argv[1]}`) {
+  initializeDefaultRooms();
 }

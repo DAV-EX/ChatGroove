@@ -4,7 +4,7 @@ ChatGroove is a fully functional modern social messaging application that succes
 
 ## Current Status: Production-Ready ✓
 - **Complete Authentication System**: JWT-based auth with Google OAuth integration and email verification
-- **MongoDB Integration**: Full MongoDB Atlas support with proper fallback mechanisms
+- **PostgreSQL Integration**: Full PostgreSQL database with Drizzle ORM for persistent data storage
 - **Real-time Messaging**: Multi-participant chat support with read receipts and message types
 - **Global Room Discovery**: Public chat rooms users can browse and join
 - **Group Chat Management**: Create and manage group conversations
@@ -42,11 +42,11 @@ The server uses **Express.js** with TypeScript in ESM format:
 - **File Structure**: Modular design with separate files for routes, storage layer, database connection, and authentication
 
 ## Data Storage
-**MongoDB Atlas** with **Mongoose ODM** for flexible document-based operations:
-- **Schema Design**: Flexible document structure with proper relationships
-- **Collections**: Users, chats, and messages with embedded participant management
-- **Connection**: MongoDB Atlas with automatic failover to memory storage during development
-- **Security**: Proper authentication and IP whitelisting for production access
+**PostgreSQL** with **Drizzle ORM** for reliable relational database operations:
+- **Schema Design**: Type-safe relational schema with proper foreign key relationships
+- **Tables**: Users, chats, messages, and sessions with JSONB for flexible participant management
+- **Connection**: PostgreSQL with WebSocket support via Neon serverless driver
+- **ORM Features**: Automatic schema generation, type-safe queries, and migrations
 
 ## Authentication System
 **JWT-based authentication** with **Google OAuth** integration:

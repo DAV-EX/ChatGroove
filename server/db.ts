@@ -1,46 +1,27 @@
-import mongoose from 'mongoose';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import ws from "ws";
+import * as schema from "@shared/schema";
 
-const MONGODB_URI = process.env.MONGODB_URI;
+neonConfig.webSocketConstructor = ws;
 
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable');
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL must be set. Did you forget to provision a database?",
+  );
 }
 
-// Global is used here to maintain a cached connection across hot reloads in development
-let cached = (global as any).mongoose;
+export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const db = drizzle({ client: pool, schema });
 
-if (!cached) {
-  cached = (global as any).mongoose = { conn: null, promise: null };
-}
-
-export async function connectDB() {
-  if (cached.conn) {
-    return cached.conn;
-  }
-
-  if (!cached.promise) {
-    const opts = {
-      bufferCommands: false,
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 20000,
-      maxPoolSize: 10,
-      minPoolSize: 1,
-      retryWrites: true,
-      ssl: true,
-    };
-
-    cached.promise = mongoose.connect(MONGODB_URI!, opts);
-  }
-
+// Test database connection
+export async function testConnection() {
   try {
-    cached.conn = await cached.promise;
-  } catch (e) {
-    cached.promise = null;
-    throw e;
+    const result = await pool.query('SELECT NOW()');
+    console.log('✓ Database connected successfully at', result.rows[0].now);
+    return true;
+  } catch (error) {
+    console.error('✗ Database connection failed:', error);
+    return false;
   }
-
-  return cached.conn;
 }
-
-export default connectDB;
