@@ -122,12 +122,176 @@ export const register = async (req: Request, res: Response) => {
         await emailTransporter.sendMail({
           from: process.env.FROM_EMAIL,
           to: validatedData.email,
-          subject: 'Verify your ChatGroove account',
+          subject: 'Welcome to ChatGroove - Verify Your Account',
           html: `
-            <h1>Welcome to ChatGroove!</h1>
-            <p>Please click the link below to verify your email address:</p>
-            <a href="${process.env.BASE_URL}/verify-email?token=${emailVerificationToken}">Verify Email</a>
-            <p>This link will expire in 24 hours.</p>
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Welcome to ChatGroove</title>
+              <style>
+                body {
+                  margin: 0;
+                  padding: 0;
+                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                  line-height: 1.6;
+                  color: #333333;
+                  background-color: #f8fafc;
+                }
+                .email-container {
+                  max-width: 600px;
+                  margin: 0 auto;
+                  background-color: #ffffff;
+                  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                }
+                .header {
+                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                  padding: 40px 30px;
+                  text-align: center;
+                }
+                .logo {
+                  color: #ffffff;
+                  font-size: 28px;
+                  font-weight: bold;
+                  margin: 0;
+                  letter-spacing: -0.5px;
+                }
+                .content {
+                  padding: 40px 30px;
+                }
+                .welcome-title {
+                  font-size: 24px;
+                  font-weight: 600;
+                  color: #1a202c;
+                  margin: 0 0 16px 0;
+                  text-align: center;
+                }
+                .welcome-message {
+                  font-size: 16px;
+                  color: #4a5568;
+                  margin: 0 0 32px 0;
+                  text-align: center;
+                }
+                .verify-button {
+                  display: inline-block;
+                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                  color: #ffffff;
+                  text-decoration: none;
+                  padding: 16px 32px;
+                  border-radius: 8px;
+                  font-weight: 600;
+                  font-size: 16px;
+                  text-align: center;
+                  margin: 0 auto;
+                  display: block;
+                  width: fit-content;
+                  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                  transition: all 0.2s ease;
+                }
+                .verify-button:hover {
+                  transform: translateY(-1px);
+                  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+                }
+                .manual-link {
+                  margin-top: 24px;
+                  padding: 20px;
+                  background-color: #f7fafc;
+                  border-radius: 8px;
+                  border-left: 4px solid #667eea;
+                }
+                .manual-link p {
+                  margin: 0 0 8px 0;
+                  font-size: 14px;
+                  color: #4a5568;
+                }
+                .manual-link a {
+                  color: #667eea;
+                  word-break: break-all;
+                  text-decoration: none;
+                }
+                .footer {
+                  background-color: #f7fafc;
+                  padding: 30px;
+                  text-align: center;
+                  border-top: 1px solid #e2e8f0;
+                }
+                .footer p {
+                  margin: 0 0 8px 0;
+                  font-size: 14px;
+                  color: #718096;
+                }
+                .footer .company-name {
+                  font-weight: 600;
+                  color: #4a5568;
+                }
+                .expiry-notice {
+                  margin-top: 24px;
+                  padding: 16px;
+                  background-color: #fef5e7;
+                  border-radius: 8px;
+                  border-left: 4px solid #f6ad55;
+                  text-align: center;
+                }
+                .expiry-notice p {
+                  margin: 0;
+                  font-size: 14px;
+                  color: #744210;
+                }
+                @media only screen and (max-width: 600px) {
+                  .email-container {
+                    margin: 0;
+                    box-shadow: none;
+                  }
+                  .header, .content, .footer {
+                    padding: 30px 20px;
+                  }
+                  .welcome-title {
+                    font-size: 22px;
+                  }
+                  .verify-button {
+                    padding: 14px 28px;
+                    font-size: 15px;
+                  }
+                }
+              </style>
+            </head>
+            <body>
+              <div class="email-container">
+                <div class="header">
+                  <h1 class="logo">ChatGroove</h1>
+                </div>
+                
+                <div class="content">
+                  <h1 class="welcome-title">Welcome to ChatGroove!</h1>
+                  <p class="welcome-message">
+                    Thank you for joining our community. To get started and access all features, 
+                    please verify your email address by clicking the button below.
+                  </p>
+                  
+                  <a href="${process.env.BASE_URL}/verify-email?token=${emailVerificationToken}" class="verify-button">
+                    Verify My Email Address
+                  </a>
+                  
+                  <div class="manual-link">
+                    <p><strong>Having trouble with the button?</strong></p>
+                    <p>Copy and paste this link into your browser:</p>
+                    <a href="${process.env.BASE_URL}/verify-email?token=${emailVerificationToken}">${process.env.BASE_URL}/verify-email?token=${emailVerificationToken}</a>
+                  </div>
+                  
+                  <div class="expiry-notice">
+                    <p><strong>⏰ This verification link expires in 24 hours</strong></p>
+                  </div>
+                </div>
+                
+                <div class="footer">
+                  <p class="company-name">ChatGroove Team</p>
+                  <p>Connect, chat, and collaborate in real-time</p>
+                  <p>If you didn't create this account, you can safely ignore this email.</p>
+                </div>
+              </div>
+            </body>
+            </html>
           `,
         });
       } catch (emailError) {
